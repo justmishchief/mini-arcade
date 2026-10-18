@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic Tac Toe · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar: logo, online users count, sign in -->
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>❌ Tic Tac Toe</h1></div>
+
+  <!-- Mode and bot level selectors -->
+  <div class="panel glass">
+    <div class="row"><b>Mode</b>
+      <button data-mode="bot" class="on">vs Bot</button>
+      <button data-mode="local">Same device</button>
+      <button data-mode="online" disabled title="Coming soon">Online</button>
+    </div>
+    <div class="row" id="level-row"><b>Bot level</b>
+      <button data-level="easy">Easy</button>
+      <button data-level="hard" class="on">Hard (unbeatable)</button>
+    </div>
+  </div>
+
+  <!-- Game board, filled in by js/tictactoe.js -->
+  <div class="stage glass">
+    <div id="status">Your turn (X)</div>
+    <div class="board" id="board"></div>
+    <div class="scores"><span id="sx">X: 0</span><span id="sd">Draws: 0</span><span id="so">O: 0</span></div>
+    <button id="reset">New round</button>
+  </div>
+
+  <footer>Made by Mishu. Built from scratch.</footer>
+</div>
+<script src="js/tictactoe.js"></script>
+</body>
+</html>

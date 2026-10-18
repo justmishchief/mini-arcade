@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Top bar: logo, online users count, sign in -->
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>The games from recess, all in one place.</h1>
+    <p>Play against a bot, share one screen with friends, or play online. No download needed.</p>
+    <a class="btn cta" href="#games">See all games</a>
+  </section>
+
+  <!-- Game cards -->
+  <section id="games">
+    <h2>Games</h2>
+    <div class="grid">
+      <a class="card glass" href="tictactoe.html"><div class="icon">❌</div><h3>Tic Tac Toe</h3><small>2 players · bot · same device</small><span class="tag live">Playable</span></a>
+      <div class="card glass"><div class="icon">🐍</div><h3>Snake &amp; Ladder</h3><small>2 to 6 players</small><span class="tag">Coming soon</span></div>
+      <div class="card glass"><div class="icon">🎲</div><h3>Ludo</h3><small>2 to 6 players</small><span class="tag">Coming soon</span></div>
+    </div>
+  </section>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+</body>
+</html>
