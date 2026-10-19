@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pen Football Fight · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .desk-stage {
+    width: 100%;
+    max-width: 620px;
+    height: 400px;
+    margin: 14px auto;
+    border-radius: 20px;
+    position: relative;
+    background: #c89666;
+    background-image: 
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 2px, transparent 2px, transparent 40px),
+      linear-gradient(to bottom, #b5814c 0%, #9c6835 100%);
+    box-shadow: inset 0 0 35px rgba(0,0,0,0.4), 0 14px 34px rgba(0,0,0,0.18);
+    border: 10px solid #5a3416;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+  .desk-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>🖊️ Pen Football Fight</h1></div>
+
+  <!-- Setup screen -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on">Play here</button>
+      <button disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row"><b>Opponent</b>
+      <button id="opp-bot" class="on">vs Bot 🤖</button>
+      <button id="opp-human">2 Players (Same device)</button>
+    </div>
+    <div class="row" id="bot-row"><b>Bot level</b>
+      <button data-level="easy">Easy</button>
+      <button data-level="medium" class="on">Medium</button>
+      <button data-level="hard">Hard</button>
+    </div>
+    <div class="note">Heavy weighted pens on a walled desk arena! Strike the opponent's pen and smash it into their goal net to score. First to 3 goals wins!</div>
+    <div class="actions"><button class="cta" id="start">Start Match</button></div>
+  </div>
+
+  <!-- Game stage -->
+  <div class="stage glass" id="game" style="display:none">
+    <div class="scores" id="round-bar">First to 3 Goals</div>
+    <div id="status">Player 1's turn</div>
+    <div class="scores" id="score-tally">Player 1 (Blue): 0  ·  Player 2 (Red): 0</div>
+
+    <div class="desk-stage">
+      <canvas id="canvas" class="desk-canvas"></canvas>
+    </div>
+
+    <div class="note">Drag back from your pen to adjust power and aim, then release to strike!</div>
+    <div class="actions">
+      <button id="new-btn">Restart Match</button>
+      <button id="change-btn">Change Mode</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/penfight.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>♞ Chess</h1></div>
+
+  <div class="panel glass">
+    <div class="row"><b>Mode</b>
+      <button data-mode="bot" class="on">vs Bot</button>
+      <button data-mode="local">Same device</button>
+      <button data-mode="online" disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row" id="bot-row"><b>Bot level</b>
+      <button data-level="easy">Easy</button>
+      <button data-level="medium" class="on">Medium</button>
+      <button data-level="hard">Hard</button>
+    </div>
+    <div class="row" id="side-row"><b>You play</b>
+      <button data-side="w" class="on">White</button>
+      <button data-side="b">Black</button>
+    </div>
+  </div>
+
+  <div class="stage glass">
+    <div id="status">White to move</div>
+    <div class="chess" id="board"></div>
+    <div class="actions">
+      <button id="new">New game</button>
+      <button id="undo">Undo</button>
+      <button id="flip">Flip board</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<!-- chess-lib.js = the chess.js library (v0.10.3, BSD licence). It handles all the chess rules: legal moves, check, castling, etc. -->
+<script src="js/chess-lib.js"></script>
+<script src="js/chess.js"></script>
+</body>
+</html>

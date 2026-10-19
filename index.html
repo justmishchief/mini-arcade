@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tiny Arcade</title>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,24 +19,100 @@
     </div>
   </div>
 
-  <!-- Hero -->
-  <section class="hero">
-    <h1>The games from recess, all in one place.</h1>
-    <p>Play against a bot, share one screen with friends, or play online. No download needed.</p>
-    <a class="btn cta" href="#games">See all games</a>
+  <!-- Pill navigation: filters the game list below -->
+  <div class="nav">
+    <div class="seg" id="tabs">
+      <button data-f="all" class="on">All games</button>
+      <button data-f="board">Board</button>
+      <button data-f="sports">Sports</button>
+      <button data-f="six">Up to 6 players</button>
+    </div>
+  </div>
+
+  <!-- Featured games -->
+  <section class="heroes">
+    <a class="hero-card" href="ludo.html" style="--g1:#ff9f0a;--g2:#ff375f">
+      <span class="art">🎲</span>
+      <span class="badge">● Playable now</span>
+      <div class="txt"><h2>Ludo</h2><p>2 to 6 players. Bring friends, bots, or both.</p></div>
+      <div class="hero-bar"><div class="ico">🎲</div><div class="meta"><b>Ludo</b><small>Bots · same device</small></div><span class="playbtn">Play</span></div>
+    </a>
+    <a class="hero-card" href="chess.html" style="--g1:#1c1c1e;--g2:#58585c">
+      <span class="art">♞</span>
+      <span class="badge">● Playable now</span>
+      <div class="txt"><h2>Chess</h2><p>Challenge the bot. Three levels.</p></div>
+      <div class="hero-bar"><div class="ico">♞</div><div class="meta"><b>Chess</b><small>Bot · same device</small></div><span class="playbtn">Play</span></div>
+    </a>
   </section>
 
-  <!-- Game cards -->
-  <section id="games">
-    <h2>Games</h2>
-    <div class="grid">
-      <a class="card glass" href="tictactoe.html"><div class="icon">❌</div><h3>Tic Tac Toe</h3><small>2 players · bot · same device</small><span class="tag live">Playable</span></a>
-      <div class="card glass"><div class="icon">🐍</div><h3>Snake &amp; Ladder</h3><small>2 to 6 players</small><span class="tag">Coming soon</span></div>
-      <div class="card glass"><div class="icon">🎲</div><h3>Ludo</h3><small>2 to 6 players</small><span class="tag">Coming soon</span></div>
+  <!-- All games -->
+  <section>
+    <div class="sectionhead"><h2>Top games</h2><span id="count">8 games</span></div>
+    <div class="glist" id="glist">
+
+      <a class="gcard glass" href="penfight.html" data-cats="sports" style="--g1:#007aff;--g2:#5856d6">
+        <div class="gthumb">🖊️</div>
+        <div class="gbody"><h3>Pen Fight</h3><small>Flick and knock pens off the desk.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="tictactoe.html" data-cats="board" style="--g1:#48484a;--g2:#98989d">
+        <div class="gthumb">❌</div>
+        <div class="gbody"><h3>Tic Tac Toe</h3><small>The classic. 3 bot levels.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="snakeladder.html" data-cats="board six" style="--g1:#30d158;--g2:#0a8f6a">
+        <div class="gthumb">🐍</div>
+        <div class="gbody"><h3>Snake &amp; Ladder</h3><small>Climb up, slide down.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="ludo.html" data-cats="board six" style="--g1:#ff9f0a;--g2:#ff375f">
+        <div class="gthumb">🎲</div>
+        <div class="gbody"><h3>Ludo</h3><small>Roll a 6, race home.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="chess.html" data-cats="board" style="--g1:#1c1c1e;--g2:#58585c">
+        <div class="gthumb">♞</div>
+        <div class="gbody"><h3>Chess</h3><small>Full rules, 3 bot levels.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="carrom.html" data-cats="board sports" style="--g1:#ffb340;--g2:#ff6b35">
+        <div class="gthumb">🔴</div>
+        <div class="gbody"><h3>Carrom</h3><small>Flick, pocket, cover the queen.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="cricket.html" data-cats="sports" style="--g1:#34c759;--g2:#0f9d9a">
+        <div class="gthumb">🏏</div>
+        <div class="gbody"><h3>Hand Cricket</h3><small>Show a number, don't get matched.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+      </a>
+
+      <a class="gcard glass" href="chorsipahi.html" data-cats="board" style="--g1:#d48806;--g2:#5b8c00">
+        <div class="gthumb">📜</div>
+        <div class="gbody"><h3>King &amp; Thief</h3><small>Secret chits: find who the thief is.</small><span class="playbtn">Play</span>
+          <div class="chiprow"><span class="mini">4 players</span><span class="mini">Bots</span></div></div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- Coming soon -->
+  <section>
+    <div class="sectionhead"><h2>Coming soon</h2></div>
+    <div class="soon">
+      <div class="item glass"><span class="ic">🔑</span><div><b>Online rooms</b><small>Make a room code and play with friends anywhere.</small><span class="tag">Coming soon</span></div></div>
+      <div class="item glass"><span class="ic">🏆</span><div><b>Leaderboard</b><small>Sign in and see who is on top.</small><span class="tag">Coming soon</span></div></div>
+      <div class="item glass"><span class="ic">💬</span><div><b>Forum</b><small>Talk games, share tips, suggest new ones.</small><span class="tag">Coming soon</span></div></div>
     </div>
   </section>
 
   <footer>MADE BY JUSTMISHCHIEF</footer>
 </div>
+<script src="js/home.js"></script>
 </body>
 </html>

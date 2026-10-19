@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carrom · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>🔴 Carrom</h1></div>
+
+  <!-- Setup: 2-player local or vs Bot -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on">Play here</button>
+      <button disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row"><b>Opponent</b>
+      <button id="opp-bot" class="on">vs Bot 🤖</button>
+      <button id="opp-human">2 Players (Same device)</button>
+    </div>
+    <div class="row" id="bot-row"><b>Bot level</b>
+      <button data-level="easy">Easy</button>
+      <button data-level="medium" class="on">Medium</button>
+      <button data-level="hard">Hard</button>
+    </div>
+    <div class="note">Player 1 is White (Bottom), Player 2 is Black (Top). Pocket all 9 of your coins and cover the queen to win.</div>
+    <div class="actions"><button class="cta" id="start">Start game</button></div>
+  </div>
+
+  <!-- Game stage -->
+  <div class="stage glass" id="game" style="display:none">
+    <div id="status">Your turn</div>
+    <div id="scorebar" class="scores"></div>
+    <canvas id="canvas" class="carrom"></canvas>
+    <div class="row" style="justify-content:center">
+      <b style="min-width:auto">Striker</b>
+      <input type="range" id="slider" min="100" max="500" value="300" step="1" style="width:min(70%,320px)">
+    </div>
+    <div class="note">Slide the striker along its line, then drag back from the striker and let go to shoot. Longer drag = harder shot.</div>
+    <div id="msg" class="note" style="min-height:1.6em;font-weight:600"></div>
+    <div class="actions">
+      <button id="new">New game</button>
+      <button id="change">Change mode</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/carrom.js"></script>
+</body>
+</html>

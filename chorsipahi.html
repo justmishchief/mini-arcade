@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>King &amp; Thief · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .table-felt {
+    width: 100%;
+    max-width: 580px;
+    height: 380px;
+    margin: 14px auto;
+    border-radius: 24px;
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, #2e7d32 0%, #1b5e20 85%);
+    box-shadow: inset 0 0 40px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.15);
+    border: 4px solid #4e342e;
+    overflow: hidden;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .chit {
+    position: absolute;
+    width: 96px;
+    height: 68px;
+    background: #fffdfa;
+    border-radius: 10px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.35), inset 0 0 6px rgba(0,0,0,.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    color: #3e2723;
+    border: 2px dashed #bcaaa4;
+    transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.3s, opacity 0.3s;
+    z-index: 2;
+  }
+  .chit:hover:not(.picked) {
+    box-shadow: 0 14px 28px rgba(0,0,0,.5);
+    filter: brightness(1.05);
+    transform: scale(1.06) rotate(0deg) !important;
+  }
+  .chit.picked {
+    cursor: default;
+    background: rgba(255, 253, 245, 0.65);
+    border-style: solid;
+    border-color: #8d6e63;
+    box-shadow: 0 3px 8px rgba(0,0,0,.2);
+  }
+  .chit-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #5d4037;
+    margin-top: 3px;
+    background: rgba(141, 110, 99, 0.18);
+    padding: 1px 6px;
+    border-radius: 99px;
+  }
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 16px;
+  }
+  .chit-revealed {
+    background: #fffdf5;
+    padding: 24px 30px;
+    border-radius: 18px;
+    text-align: center;
+    max-width: 320px;
+    width: 100%;
+    box-shadow: 0 16px 36px rgba(0,0,0,.3);
+    border: 2px dashed #8d6e63;
+    animation: popUp 0.25s ease-out;
+  }
+  @keyframes popUp {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .role-title {
+    font-size: 30px;
+    font-weight: 800;
+    margin: 8px 0;
+  }
+  .role-pts {
+    font-size: 15px;
+    color: var(--ink2);
+    font-weight: 600;
+  }
+  .guess-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>📜 King &amp; Thief</h1></div>
+
+  <!-- Setup screen -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on">Play here</button>
+      <button disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row"><b>Rounds</b>
+      <button data-rounds="3">3</button>
+      <button data-rounds="5" class="on">5</button>
+      <button data-rounds="10">10</button>
+    </div>
+    <div class="seats" id="seats"></div>
+    <div class="note">4 players: King (1000 pts), Minister (800 pts), Soldier (500 pts), Thief (0 pts). Chits are tossed onto the table. Pick any chit!</div>
+    <div class="actions"><button class="cta" id="start">Toss chits</button></div>
+  </div>
+
+  <!-- Game stage -->
+  <div class="stage glass" id="game" style="display:none">
+    <div class="scores" id="round-bar">Round 1 of 5</div>
+    <div id="status">Tossing chits...</div>
+    <div class="pcards" id="score-cards"></div>
+
+    <div class="table-felt" id="table">
+      <!-- 4 visible chits will be rendered here -->
+    </div>
+
+    <div class="actions">
+      <button id="next-btn" class="cta" style="display:none">Next Round</button>
+      <button id="change-btn">Change settings</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/chorsipahi.js"></script>
+</body>
+</html>

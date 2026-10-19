@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hand Cricket · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>🏏 Hand Cricket</h1></div>
+
+  <!-- Setup -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button data-mode="bot" class="on">vs Bot</button>
+      <button data-mode="local">Same device</button>
+      <button data-mode="online" disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row" id="level-row"><b>Bot level</b>
+      <button data-level="easy">Easy</button>
+      <button data-level="medium" class="on">Medium</button>
+      <button data-level="hard">Hard</button>
+    </div>
+    <div class="row"><b>Wickets</b>
+      <button data-wk="1" class="on">1 (classic)</button>
+      <button data-wk="3">3</button>
+      <button data-wk="5">5</button>
+    </div>
+    <div class="row"><b>Overs</b>
+      <button data-balls="0" class="on">Until out</button>
+      <button data-balls="6">1 over</button>
+      <button data-balls="12">2 overs</button>
+      <button data-balls="30">5 overs</button>
+    </div>
+    <div class="note">Both players show 1 to 6 together. Same number = the batter is OUT. Different = the batter scores his number.</div>
+    <div class="actions"><button class="cta" id="start">Start match</button></div>
+  </div>
+
+  <!-- Match -->
+  <div class="stage glass" id="game" style="display:none">
+    <div id="cstage"></div>
+    <div class="actions"><button id="quit">Change settings</button></div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/cricket.js"></script>
+</body>
+</html>

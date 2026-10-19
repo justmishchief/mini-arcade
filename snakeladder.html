@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake &amp; Ladder · Tiny Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Tiny Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 0 online</span>
+      <button disabled title="Coming soon">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>🐍 Snake &amp; Ladder</h1></div>
+
+  <!-- Setup: how many players, and who is human or bot -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on">Play here</button>
+      <button disabled title="Coming soon">Online (room code)</button>
+    </div>
+    <div class="row"><b>Players</b><span id="count-btns" class="row"></span></div>
+    <div class="seats" id="seats"></div>
+    <div class="note">All humans = friends sharing one screen. Mix in bots to play solo (at least 1 human is always needed).</div>
+    <div class="actions"><button class="cta" id="start">Start game</button></div>
+  </div>
+
+  <!-- Game -->
+  <div class="stage glass" id="game" style="display:none">
+    <div class="pcards" id="pcards"></div>
+    <div id="status">Red's turn</div>
+    <svg id="board" class="svgboard" viewBox="0 0 500 500"></svg>
+    <div class="actions">
+      <button class="dice" id="dice">🎲</button>
+      <button id="roll" class="cta">Roll dice</button>
+    </div>
+    <div class="actions">
+      <button id="again">New game</button>
+      <button id="change">Change players</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/snakeladder.js"></script>
+</body>
+</html>
