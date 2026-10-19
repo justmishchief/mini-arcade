@@ -3,113 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tiny Arcade</title>
+<title>Mini Arcade</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<!-- Supabase SDK & Auth Engine -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
+<style>
+  /* Compact Rules Grid & Cards */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin: 16px 0 28px;
+  }
+  .rule-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s, box-shadow 0.2s;
+    user-select: none;
+  }
+  .rule-box:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+  }
+  .rule-box .rb-icon {
+    font-size: 30px;
+    margin-bottom: 6px;
+  }
+  .rule-box .rb-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink, #1c1c1e);
+  }
+
+  /* Modal Popup for Rules */
+  .rule-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .rule-modal {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(25px);
+    border-radius: 24px;
+    padding: 24px 22px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 45px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.4);
+    font-family: 'Inter', sans-serif;
+    color: #1c1c1e;
+    animation: popUpRule 0.2s ease-out;
+  }
+  @keyframes popUpRule {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .rule-modal h3 {
+    margin: 8px 0 12px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rule-modal p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #48484a;
+    margin: 0 0 16px;
+  }
+  .rule-modal ul {
+    margin: 0 0 18px;
+    padding-left: 20px;
+    font-size: 13px;
+    color: #3a3a3c;
+    line-height: 1.6;
+  }
+
+  /* About Box */
+  .about-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin: 16px 0;
+    line-height: 1.7;
+    font-size: 14.5px;
+    color: var(--ink2, #636366);
+  }
+  .about-box b {
+    color: var(--ink, #1c1c1e);
+  }
+</style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- Top bar: logo, online users count, sign in -->
+  <!-- Top bar -->
   <div class="topbar">
-    <a href="index.html" class="logo">Tiny Arcade</a>
+    <a href="index.html" class="logo">Mini Arcade</a>
     <div class="topright">
-      <span class="pill" id="online-count">● 0 online</span>
-      <button disabled title="Coming soon">Sign in</button>
+      <span class="pill" id="online-count">● 5 guest passes left</span>
+      <button id="auth-btn">Sign in</button>
     </div>
   </div>
 
-  <!-- Pill navigation: filters the game list below -->
+  <!-- Pill navigation: All games, Rules, About -->
   <div class="nav">
     <div class="seg" id="tabs">
-      <button data-f="all" class="on">All games</button>
-      <button data-f="board">Board</button>
-      <button data-f="sports">Sports</button>
-      <button data-f="six">Up to 6 players</button>
+      <button data-tab="games" class="on">All games</button>
+      <button data-tab="rules">Rules</button>
+      <button data-tab="about">About</button>
     </div>
   </div>
 
-  <!-- Featured games -->
-  <section class="heroes">
-    <a class="hero-card" href="ludo.html" style="--g1:#ff9f0a;--g2:#ff375f">
-      <span class="art">🎲</span>
-      <span class="badge">● Playable now</span>
-      <div class="txt"><h2>Ludo</h2><p>2 to 6 players. Bring friends, bots, or both.</p></div>
-      <div class="hero-bar"><div class="ico">🎲</div><div class="meta"><b>Ludo</b><small>Bots · same device</small></div><span class="playbtn">Play</span></div>
-    </a>
-    <a class="hero-card" href="chess.html" style="--g1:#1c1c1e;--g2:#58585c">
-      <span class="art">♞</span>
-      <span class="badge">● Playable now</span>
-      <div class="txt"><h2>Chess</h2><p>Challenge the bot. Three levels.</p></div>
-      <div class="hero-bar"><div class="ico">♞</div><div class="meta"><b>Chess</b><small>Bot · same device</small></div><span class="playbtn">Play</span></div>
-    </a>
-  </section>
+  <!-- VIEW 1: ALL GAMES -->
+  <div id="view-games">
+    <!-- Featured Dynamic Hero Cards -->
+    <section class="heroes" id="hero-container"></section>
 
-  <!-- All games -->
-  <section>
-    <div class="sectionhead"><h2>Top games</h2><span id="count">8 games</span></div>
-    <div class="glist" id="glist">
+    <!-- All games grid -->
+    <section>
+      <div class="sectionhead"><h2>Top games</h2><span id="count">8 games</span></div>
+      <div class="glist" id="glist">
 
-      <a class="gcard glass" href="penfight.html" data-cats="sports" style="--g1:#007aff;--g2:#5856d6">
-        <div class="gthumb">🖊️</div>
-        <div class="gbody"><h3>Pen Fight</h3><small>Flick and knock pens off the desk.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
-      </a>
+        <a class="gcard glass" href="penfight.html" style="--g1:#007aff;--g2:#5856d6">
+          <div class="gthumb">🖊️</div>
+          <div class="gbody"><h3>Pen Fight</h3><small>Heavy pen football fight arena.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Online / Bot</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="tictactoe.html" data-cats="board" style="--g1:#48484a;--g2:#98989d">
-        <div class="gthumb">❌</div>
-        <div class="gbody"><h3>Tic Tac Toe</h3><small>The classic. 3 bot levels.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
-      </a>
+        <a class="gcard glass" href="chorsipahi.html" style="--g1:#d48806;--g2:#5b8c00">
+          <div class="gthumb">📜</div>
+          <div class="gbody"><h3>King &amp; Thief</h3><small>Secret chits: find who the thief is.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">4 players</span><span class="mini">Bots</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="snakeladder.html" data-cats="board six" style="--g1:#30d158;--g2:#0a8f6a">
-        <div class="gthumb">🐍</div>
-        <div class="gbody"><h3>Snake &amp; Ladder</h3><small>Climb up, slide down.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
-      </a>
+        <a class="gcard glass" href="tictactoe.html" style="--g1:#48484a;--g2:#98989d">
+          <div class="gthumb">❌</div>
+          <div class="gbody"><h3>Tic Tac Toe</h3><small>The classic. Online &amp; AI bot.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Online / Bot</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="ludo.html" data-cats="board six" style="--g1:#ff9f0a;--g2:#ff375f">
-        <div class="gthumb">🎲</div>
-        <div class="gbody"><h3>Ludo</h3><small>Roll a 6, race home.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
-      </a>
+        <a class="gcard glass" href="snakeladder.html" style="--g1:#30d158;--g2:#0a8f6a">
+          <div class="gthumb">🐍</div>
+          <div class="gbody"><h3>Snake &amp; Ladder</h3><small>Climb up, slide down.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="chess.html" data-cats="board" style="--g1:#1c1c1e;--g2:#58585c">
-        <div class="gthumb">♞</div>
-        <div class="gbody"><h3>Chess</h3><small>Full rules, 3 bot levels.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
-      </a>
+        <a class="gcard glass" href="ludo.html" style="--g1:#ff9f0a;--g2:#ff375f">
+          <div class="gthumb">🎲</div>
+          <div class="gbody"><h3>Ludo</h3><small>Roll a 6, race home.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 to 6 players</span><span class="mini">Bots</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="carrom.html" data-cats="board sports" style="--g1:#ffb340;--g2:#ff6b35">
-        <div class="gthumb">🔴</div>
-        <div class="gbody"><h3>Carrom</h3><small>Flick, pocket, cover the queen.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
-      </a>
+        <a class="gcard glass" href="chess.html" style="--g1:#1c1c1e;--g2:#58585c">
+          <div class="gthumb">♞</div>
+          <div class="gbody"><h3>Chess</h3><small>Full rules, 3 bot levels.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="cricket.html" data-cats="sports" style="--g1:#34c759;--g2:#0f9d9a">
-        <div class="gthumb">🏏</div>
-        <div class="gbody"><h3>Hand Cricket</h3><small>Show a number, don't get matched.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
-      </a>
+        <a class="gcard glass" href="carrom.html" style="--g1:#ffb340;--g2:#ff6b35">
+          <div class="gthumb">🔴</div>
+          <div class="gbody"><h3>Carrom</h3><small>Flick, pocket, cover the queen.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+        </a>
 
-      <a class="gcard glass" href="chorsipahi.html" data-cats="board" style="--g1:#d48806;--g2:#5b8c00">
-        <div class="gthumb">📜</div>
-        <div class="gbody"><h3>King &amp; Thief</h3><small>Secret chits: find who the thief is.</small><span class="playbtn">Play</span>
-          <div class="chiprow"><span class="mini">4 players</span><span class="mini">Bots</span></div></div>
-      </a>
+        <a class="gcard glass" href="cricket.html" style="--g1:#34c759;--g2:#0f9d9a">
+          <div class="gthumb">🏏</div>
+          <div class="gbody"><h3>Hand Cricket</h3><small>Show a number, don't get matched.</small><span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+        </a>
 
+      </div>
+    </section>
+
+    <!-- Platform Features -->
+    <section>
+      <div class="sectionhead"><h2>Platform Features</h2></div>
+      <div class="soon">
+        <div class="item glass">
+          <span class="ic">🔑</span>
+          <div>
+            <b>Online rooms</b>
+            <small>Create 4-letter room codes &amp; play with friends instantly on any device.</small>
+            <span class="tag" style="background:rgba(52,199,89,0.18); color:#30d158; border:1px solid rgba(52,199,89,0.3);">● Live now</span>
+          </div>
+        </div>
+        <div class="item glass"><span class="ic">🏆</span><div><b>Leaderboard</b><small>Sign in and see who is on top.</small><span class="tag">Coming soon</span></div></div>
+        <div class="item glass"><span class="ic">💬</span><div><b>Forum</b><small>Talk games, share tips, suggest new ones.</small><span class="tag">Coming soon</span></div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- VIEW 2: RULES (Small boxes with names) -->
+  <div id="view-rules" style="display:none">
+    <div class="sectionhead"><h2>Game Rules</h2><span style="font-size:12px; color:var(--ink2);">Tap any game to see how to play</span></div>
+    <div class="rules-grid" id="rules-container"></div>
+  </div>
+
+  <!-- VIEW 3: ABOUT -->
+  <div id="view-about" style="display:none">
+    <div class="sectionhead"><h2>About Mini Arcade</h2></div>
+    <div class="about-box glass">
+      <p style="margin-top:0;"><b>Mini Arcade</b> is a nostalgic collection of classic desktop, sports, and childhood tabletop games crafted directly for your browser with real-time multiplayer room codes and tactile physics.</p>
+      <p>Whether you want to play solo against tactical bots, share a device with a friend, or connect instantly with someone across rooms via a 4-letter code, everything runs seamlessly with zero downloads.</p>
+      <p>This arcade is actively evolving with more games, leaderboards, and features on the way.</p>
+      <p style="margin-bottom:0; font-weight:600; color:#007aff;">Built and designed with care by justmishchief.</p>
     </div>
-  </section>
+  </div>
 
-  <!-- Coming soon -->
-  <section>
-    <div class="sectionhead"><h2>Coming soon</h2></div>
-    <div class="soon">
-      <div class="item glass"><span class="ic">🔑</span><div><b>Online rooms</b><small>Make a room code and play with friends anywhere.</small><span class="tag">Coming soon</span></div></div>
-      <div class="item glass"><span class="ic">🏆</span><div><b>Leaderboard</b><small>Sign in and see who is on top.</small><span class="tag">Coming soon</span></div></div>
-      <div class="item glass"><span class="ic">💬</span><div><b>Forum</b><small>Talk games, share tips, suggest new ones.</small><span class="tag">Coming soon</span></div></div>
+  <!-- Rules Popup Modal -->
+  <div class="rule-modal-backdrop" id="rule-modal">
+    <div class="rule-modal">
+      <h3 id="rm-title">Game Rules</h3>
+      <p id="rm-desc"></p>
+      <ul id="rm-points"></ul>
+      <button class="cta" id="rm-close" style="width:100%;">Close</button>
     </div>
-  </section>
+  </div>
 
   <footer>MADE BY JUSTMISHCHIEF</footer>
 </div>

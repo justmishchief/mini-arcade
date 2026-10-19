@@ -14,7 +14,12 @@ const COLORS6 = ['#e63946', '#ff7a1a', '#ffb020', '#2fbf71', '#1d7bff', '#9b5de5
 const NAMES6  = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'];
 // Which arms are used (2 players sit opposite each other)
 const ARM_SETS = { 2:[0, 2], 3:[0, 1, 2], 4:[0, 1, 2, 3], 5:[0, 1, 2, 3, 4], 6:[0, 1, 2, 3, 4, 5] };
-const CX = 300, CY = 300;                                // center of the 600 x 600 drawing
+const CX = 300, CY = 300;                               // center of the 600 x 600 drawing
+
+// ---------- ONLINE MULTIPLAYER STATE ----------
+let isOnline = false;
+let onlineManager = null;
+let myRole = 0; // 0 = Player 1 (Red/Host), 1 = Player 2 (Yellow/Guest in 2P setup)
 
 // ---------- STATE ----------
 let count = 2, level = 'hard';
@@ -33,6 +38,7 @@ const namesFor = n => n <= 4 ? NAMES4 : NAMES6;
 // ---------- SETUP SCREEN ----------
 function renderSetup() {
   const cb = $('count-btns');
+  if (!cb) return;
   cb.innerHTML = '';
   for (let n = 2; n <= 6; n++) {
     const b = document.createElement('button');
@@ -223,10 +229,10 @@ function renderBoard() {
       const [x, y] = tokenXY(p, t);
       const key = x.toFixed(0) + ',' + y.toFixed(0), n = stack[key] = (stack[key] || 0) + 1;
       const ox = pr === -1 || pr === FIN ? 0 : (n - 1) * 5, oy = pr === -1 || pr === FIN ? 0 : -(n - 1) * 5;   // stacked tokens stay visible
-      const isLegal = waiting && p === turn && legal.includes(t);
+      const canPick = isOnline ? (waiting && p === turn && turn === myRole && legal.includes(t)) : (waiting && p === turn && legal.includes(t));
       const r = (pr === FIN ? 0.3 : 0.38) * W;
-      s += '<g class="tk' + (isLegal ? ' legal' : '') + '" data-t="' + t + '">' +
-        '<circle cx="' + (x + ox).toFixed(1) + '" cy="' + (y + oy).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + colorOf(p) + '" stroke="' + (isLegal ? '#1d1d1f' : '#fff') + '" stroke-width="' + (isLegal ? 4 : 2.5) + '"/>' +
+      s += '<g class="tk' + (canPick ? ' legal' : '') + '" data-t="' + t + '">' +
+        '<circle cx="' + (x + ox).toFixed(1) + '" cy="' + (y + oy).toFixed(1) + '" r="' + r.toFixed(1) + '" fill="' + colorOf(p) + '" stroke="' + (canPick ? '#1d1d1f' : '#fff') + '" stroke-width="' + (canPick ? 4 : 2.5) + '"/>' +
         '<circle cx="' + (x + ox - r * 0.3).toFixed(1) + '" cy="' + (y + oy - r * 0.3).toFixed(1) + '" r="' + (r * 0.3).toFixed(1) + '" fill="#fff" opacity=".4"/></g>';
     });
   }
@@ -245,6 +251,8 @@ function renderCards() {
 // ---------- GAME FLOW ----------
 function startGame() {
   if (!seatTypes.slice(0, count).includes('human')) return;   // never start a bots-only game
+  if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+
   gameId++;
   A = count <= 4 ? 4 : 6;
   L = A * PER_ARM; FIN = L + 4;
@@ -261,6 +269,14 @@ function startGame() {
 function nextTurn() {
   busy = false; waiting = false; legal = []; roll = null;
   renderBoard(); renderCards();
+
+  if (isOnline) {
+    const myTurn = (turn === myRole);
+    $('status').textContent = myTurn ? '👉 Your turn (' + nameOf(turn) + '): Roll dice' : '⏳ ' + nameOf(turn) + "'s turn...";
+    $('roll').disabled = !myTurn;
+    return;
+  }
+
   $('status').textContent = nameOf(turn) + "'s turn";
   const isBot = seatTypes[turn] === 'bot';
   $('roll').disabled = isBot;
@@ -272,18 +288,26 @@ function nextTurn() {
 
 // A human clicked the dice: ignore it if it is a bot's turn
 function humanRoll() {
+  if (isOnline) {
+    if (turn !== myRole || busy || over || waiting || roll !== null) return;
+    const r = 1 + Math.floor(Math.random() * 6);
+    onlineManager.sendMove({ type: 'roll', roll: r, player: myRole });
+    doRoll(r);
+    return;
+  }
+
   if (seatTypes[turn] === 'bot') return;
   doRoll();
 }
 
-async function doRoll() {
+async function doRoll(forcedRoll = null) {
   if (busy || over || waiting || roll !== null) return;
   busy = true;
   const gid = gameId;
   const alive = async ms => { await sleep(ms); return gid === gameId; };   // false if a new game started meanwhile
   $('roll').disabled = true;
   for (let i = 0; i < 6; i++) { $('dice').textContent = String.fromCharCode(9855 + 1 + Math.floor(Math.random() * 6)); if (!(await alive(70))) return; }
-  roll = 1 + Math.floor(Math.random() * 6);
+  roll = forcedRoll !== null ? forcedRoll : (1 + Math.floor(Math.random() * 6));
   $('dice').textContent = String.fromCharCode(9855 + roll);
   legal = legalMoves(turn, roll);
 
@@ -293,6 +317,25 @@ async function doRoll() {
     turn = (turn + 1) % count;
     return nextTurn();
   }
+
+  if (isOnline) {
+    if (turn === myRole) {
+      if (legal.length === 1) {
+        $('status').textContent = 'Rolled ' + roll + ': moving single token...';
+        if (!(await alive(500))) return;
+        onlineManager.sendMove({ type: 'move', t: legal[0], roll, player: myRole });
+        return doMove(legal[0]);
+      }
+      waiting = true; busy = false;
+      $('status').textContent = 'Rolled ' + roll + ': tap a glowing token to move';
+      renderBoard(); renderCards();
+    } else {
+      $('status').textContent = nameOf(turn) + ' rolled ' + roll + ': choosing token...';
+      renderBoard(); renderCards();
+    }
+    return;
+  }
+
   const isBot = seatTypes[turn] === 'bot';
   if (isBot || legal.length === 1) {                     // bots choose; a single option is played automatically
     $('status').textContent = nameOf(turn) + ' rolled ' + roll;
@@ -308,6 +351,9 @@ async function doRoll() {
 function pick(t) {
   if (!waiting || !legal.includes(t)) return;
   waiting = false; busy = true;
+  if (isOnline) {
+    onlineManager.sendMove({ type: 'move', t, roll, player: myRole });
+  }
   doMove(t);
 }
 
@@ -319,6 +365,7 @@ async function doMove(t) {
   if (tokens[p].every(pr => pr === FIN)) {
     over = true; renderCards();
     $('status').textContent = '🎉 ' + nameOf(p) + ' wins!';
+    if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
     return;
   }
   const extra = roll === 6 || captured;                  // a 6 or a capture gives another turn
@@ -329,10 +376,96 @@ async function doMove(t) {
   nextTurn();
 }
 
-// ---------- BUTTONS ----------
+// ---------- ONLINE ROOM CONNECTION ----------
+function setupOnline() {
+  onlineManager = new OnlineManager('ludo', {
+    onPlayerJoined: () => {
+      $('online-wait-msg').style.display = 'none';
+      count = 2; // Red vs Yellow classic 2-player board
+      seatTypes[0] = 'human';
+      seatTypes[1] = 'human';
+      startGame();
+    },
+    onMoveReceived: (data) => {
+      if (data.type === 'roll') {
+        doRoll(data.roll);
+      } else if (data.type === 'move') {
+        roll = data.roll;
+        doMove(data.t);
+      }
+    },
+    onRoomReady: (playerNum) => {
+      myRole = playerNum; // 0 = Red, 1 = Yellow
+      if (!onlineManager.isHost) {
+        count = 2;
+        seatTypes[0] = 'human';
+        seatTypes[1] = 'human';
+        startGame();
+      }
+    }
+  });
+
+  $('btn-create-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    $('btn-create-room').disabled = true;
+    $('btn-create-room').textContent = "Creating...";
+    const code = await onlineManager.createRoom();
+    if (code) {
+      $('disp-room-code').textContent = code;
+      $('online-wait-msg').style.display = 'block';
+    } else {
+      $('btn-create-room').disabled = false;
+      $('btn-create-room').textContent = "Create Room";
+    }
+  };
+
+  $('btn-join-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    const code = $('join-code-input').value.trim();
+    if (code.length !== 4) return alert("Please enter a 4-character code!");
+    $('btn-join-room').disabled = true;
+    $('btn-join-room').textContent = "...";
+    const ok = await onlineManager.joinRoom(code);
+    if (!ok) {
+      $('btn-join-room').disabled = false;
+      $('btn-join-room').textContent = "Join";
+    }
+  };
+}
+
+// ---------- BUTTONS & MODE TOGGLE ----------
 $('start').onclick = startGame;
 $('roll').onclick = humanRoll;
 $('dice').onclick = () => { if (!$('roll').disabled) humanRoll(); };
 $('again').onclick = startGame;
-$('change').onclick = () => { gameId++; over = true; $('game').style.display = 'none'; $('setup').style.display = ''; };
+$('change').onclick = () => {
+  gameId++; over = true;
+  if (isOnline && onlineManager) onlineManager.disconnect();
+  $('game').style.display = 'none';
+  $('setup').style.display = '';
+  $('online-wait-msg').style.display = 'none';
+  $('btn-create-room').disabled = false;
+  $('btn-create-room').textContent = "Create Room";
+  $('btn-join-room').disabled = false;
+  $('btn-join-room').textContent = "Join";
+  renderSetup();
+};
+
+$('mode-local').onclick = () => {
+  isOnline = false;
+  $('mode-local').classList.add('on');
+  $('mode-online').classList.remove('on');
+  $('local-opts').style.display = '';
+  $('online-opts').style.display = 'none';
+};
+
+$('mode-online').onclick = () => {
+  isOnline = true;
+  $('mode-online').classList.add('on');
+  $('mode-local').classList.remove('on');
+  $('local-opts').style.display = 'none';
+  $('online-opts').style.display = '';
+};
+
 renderSetup();
+setupOnline();

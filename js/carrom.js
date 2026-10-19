@@ -14,6 +14,11 @@ const POCKETS = [[24, 24], [576, 24], [24, 576], [576, 576]], POCKET_R = 26;
 const T_MIN = 100, T_MAX = 500;               // horizontal striker slider bounds
 const LINE_NEAR = 506, LINE_FAR = 94;         // baselines for bottom and top players
 
+// ---------- ONLINE STATE ----------
+let isOnline = false;
+let onlineManager = null;
+let myRole = 0; // 0 = Player 1 (White, Bottom), 1 = Player 2 (Black, Top)
+
 // ---------- STATE ----------
 let nSeats = 2;
 let seatSide = [0, 2];                        // 0 = bottom, 2 = top
@@ -260,9 +265,12 @@ if (typeof document !== 'undefined') {
   let level = 'medium';
   let moving = false, over = false, aiming = false, aimPt = null, gameId = 0;
 
-  const isBot = s => s === 1 && vsBot;
+  const isBot = s => (!isOnline && s === 1 && vsBot);
   const colorName = c => c === 'w' ? 'White' : 'Black';
-  const seatName = s => isBot(s) ? 'Bot 🤖' : 'Player ' + (s + 1) + ' (' + colorName(seatColor[s]) + ')';
+  const seatName = s => {
+    if (isOnline) return s === myRole ? 'You (' + colorName(seatColor[s]) + ')' : 'Opponent (' + colorName(seatColor[s]) + ')';
+    return isBot(s) ? 'Bot 🤖' : 'Player ' + (s + 1) + ' (' + colorName(seatColor[s]) + ')';
+  };
 
   function renderSetup() {
     $('opp-bot').classList.toggle('on', vsBot);
@@ -330,6 +338,9 @@ if (typeof document !== 'undefined') {
   function updateStatus() {
     if (over) {
       statusEl.textContent = '🎉 ' + colorName(winnerColor) + ' wins!';
+      if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
+    } else if (isOnline) {
+      statusEl.textContent = cur === myRole ? '👉 Your turn (' + colorName(seatColor[cur]) + '): Slide & shoot!' : '⏳ Opponent (' + colorName(seatColor[cur]) + ') is taking aim...';
     } else if (isBot(cur)) {
       statusEl.textContent = 'Bot is aiming...';
     } else {
@@ -341,7 +352,7 @@ if (typeof document !== 'undefined') {
     moving = false; aiming = false;
     slider.value = SIZE / 2;
     placeStriker();
-    slider.disabled = isBot(cur) || over;
+    slider.disabled = isOnline ? (cur !== myRole || over) : (isBot(cur) || over);
     updateScores(); updateStatus();
     if (isBot(cur) && !over) botPlay();
   }
@@ -356,10 +367,14 @@ if (typeof document !== 'undefined') {
     }, 700);
   }
 
-  function fire(vx, vy) {
+  function fire(vx, vy, fromRemote = false) {
     moving = true; aiming = false; slider.disabled = true;
     msgEl.textContent = '';
     shoot(vx, vy);
+
+    if (isOnline && !fromRemote && onlineManager) {
+      onlineManager.sendMove({ type: 'shot', vx, vy, t: +slider.value });
+    }
   }
 
   function afterShot() {
@@ -387,7 +402,14 @@ if (typeof document !== 'undefined') {
   }
 
   slider.oninput = () => {
-    if (!moving && !isBot(cur)) placeStriker(+slider.value);
+    if (moving || over) return;
+    if (isOnline && cur !== myRole) return;
+    if (!isOnline && isBot(cur)) return;
+    placeStriker(+slider.value);
+
+    if (isOnline && onlineManager) {
+      onlineManager.sendMove({ type: 'slider', t: +slider.value });
+    }
   };
 
   function getCanvasPos(e) {
@@ -401,7 +423,10 @@ if (typeof document !== 'undefined') {
   }
 
   function onPointerDown(e) {
-    if (moving || over || isBot(cur)) return;
+    if (moving || over) return;
+    if (isOnline && cur !== myRole) return;
+    if (!isOnline && isBot(cur)) return;
+
     const pos = getCanvasPos(e);
     if (Math.hypot(pos.x - striker.x, pos.y - striker.y) < SR * 2.2) {
       aiming = true;
@@ -432,7 +457,91 @@ if (typeof document !== 'undefined') {
   window.addEventListener('touchmove', onPointerMove, { passive: true });
   window.addEventListener('touchend', onPointerUp);
 
+  // ---------- ONLINE PROTOCOL ----------
+  function setupOnline() {
+    onlineManager = new OnlineManager('carrom', {
+      onPlayerJoined: () => {
+        $('online-wait-msg').style.display = 'none';
+        myRole = 0;
+        gameId++; over = false;
+        resetGame();
+        $('setup').style.display = 'none';
+        $('game').style.display = '';
+        startTurn();
+        statusEl.textContent = "🎮 Opponent Joined! You are White (Bottom).";
+      },
+      onMoveReceived: (data) => {
+        if (data.type === 'slider') {
+          placeStriker(data.t);
+        } else if (data.type === 'shot') {
+          placeStriker(data.t);
+          fire(data.vx, data.vy, true);
+        } else if (data.type === 'new') {
+          gameId++; over = false;
+          resetGame();
+          startTurn();
+        }
+      },
+      onRoomReady: (playerNum) => {
+        myRole = playerNum; // 0 = White (Host/Bottom), 1 = Black (Guest/Top)
+        if (!onlineManager.isHost) {
+          $('online-wait-msg').style.display = 'none';
+          gameId++; over = false;
+          resetGame();
+          $('setup').style.display = 'none';
+          $('game').style.display = '';
+          startTurn();
+          statusEl.textContent = "🎮 Connected to Host! You are Black (Top).";
+        }
+      }
+    });
+
+    $('btn-create-room').onclick = async () => {
+      if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+      $('btn-create-room').disabled = true;
+      $('btn-create-room').textContent = "Creating...";
+      const code = await onlineManager.createRoom();
+      if (code) {
+        $('disp-room-code').textContent = code;
+        $('online-wait-msg').style.display = 'block';
+      } else {
+        $('btn-create-room').disabled = false;
+        $('btn-create-room').textContent = "Create Room";
+      }
+    };
+
+    $('btn-join-room').onclick = async () => {
+      if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+      const code = $('join-code-input').value.trim();
+      if (code.length !== 4) return alert("Please enter a 4-character code!");
+      $('btn-join-room').disabled = true;
+      $('btn-join-room').textContent = "...";
+      const ok = await onlineManager.joinRoom(code);
+      if (!ok) {
+        $('btn-join-room').disabled = false;
+        $('btn-join-room').textContent = "Join";
+      }
+    };
+  }
+
+  $('mode-local').onclick = () => {
+    isOnline = false;
+    $('mode-local').classList.add('on');
+    $('mode-online').classList.remove('on');
+    $('local-opts').style.display = '';
+    $('online-opts').style.display = 'none';
+  };
+
+  $('mode-online').onclick = () => {
+    isOnline = true;
+    $('mode-online').classList.add('on');
+    $('mode-local').classList.remove('on');
+    $('local-opts').style.display = 'none';
+    $('online-opts').style.display = '';
+  };
+
   $('start').onclick = () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
     gameId++; over = false;
     resetGame();
     $('setup').style.display = 'none';
@@ -441,18 +550,29 @@ if (typeof document !== 'undefined') {
   };
 
   $('new').onclick = () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
     gameId++; over = false;
     resetGame();
+    if (isOnline && onlineManager) {
+      onlineManager.sendMove({ type: 'new' });
+    }
     startTurn();
   };
 
   $('change').onclick = () => {
     gameId++; over = true;
+    if (isOnline && onlineManager) onlineManager.disconnect();
     $('game').style.display = 'none';
     $('setup').style.display = '';
+    $('online-wait-msg').style.display = 'none';
+    $('btn-create-room').disabled = false;
+    $('btn-create-room').textContent = "Create Room";
+    $('btn-join-room').disabled = false;
+    $('btn-join-room').textContent = "Join";
     renderSetup();
   };
 
   renderSetup();
+  setupOnline();
   requestAnimationFrame(loop);
 }

@@ -223,3 +223,95 @@ footer { margin:50px auto 0; text-align:center; color:var(--ink2); font-size:13p
   .chiprow { grid-column:1; }
 }
 @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+/* 1. Freeze viewport scrollbar so no page ever shifts horizontally */
+html {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable !important;
+}
+
+/* 2. Prevent browser from vertically pushing content down */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+/* 3. Outer container scaling for all viewports (Mobile, iPad, Desktop) */
+.wrap {
+  width: 100% !important;
+  max-width: 1080px !important;
+  margin: 0 auto !important;
+  padding: 24px 20px 60px !important;
+  box-sizing: border-box !important;
+}
+
+/* 4. ABSOLUTE TOPBAR LOCK: Locks width, height & horizontal position across ALL pages */
+.topbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  max-width: 600px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  margin: 0 auto 24px auto !important;
+  padding: 0 20px !important;
+  box-sizing: border-box !important;
+  border-radius: 999px !important;
+}
+
+/* 5. Mini Arcade Logo coordinates & typography freeze */
+.topbar .logo,
+.topbar a.logo {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 52px !important;
+  height: 52px !important;
+  letter-spacing: -0.4px !important;
+  color: var(--ink, #1c1c1e) !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* 6. Topright pass pill & auth button freeze */
+.topbar .topright {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  height: 52px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* 7. Game cards alignment (Matches the 600px topbar perfectly) */
+.panel, 
+.gamehead {
+  max-width: 600px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.stage {
+  max-width: 640px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* 8. Mobile & Small Tablet fallback */
+@media (max-width: 640px) {
+  .wrap {
+    padding: 16px 12px 48px !important;
+  }
+  .topbar {
+    max-width: 100% !important;
+    border-radius: 18px !important;
+    padding: 0 16px !important;
+  }
+}

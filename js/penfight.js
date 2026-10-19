@@ -19,6 +19,11 @@ const ANGULAR_FRICTION = 0.91;
 const MAX_IMPULSE = 19;
 const SUB_STEPS = 8;
 
+// ---------- ONLINE STATE ----------
+let isOnline = false;
+let onlineManager = null;
+let myRole = 0; // 0 = Player 1 (Blue, defending Left Net), 1 = Player 2 (Red, defending Right Net)
+
 // ---------- STATE ----------
 let vsBot = true;
 let botLevel = 'medium';
@@ -91,7 +96,7 @@ function checkPenCollision(p1, p2) {
     const p = (2 * (nx * kx + ny * ky)) / (p1.mass + p2.mass);
 
     p1.vx -= p * p2.mass * nx * 0.88;
-    p1.vy -= p * p2.mass * ny * 0.88;
+    p1.vy -= p * p2.mass * nx * 0.88;
     p2.vx += p * p1.mass * nx * 0.88;
     p2.vy += p * p1.mass * ny * 0.88;
 
@@ -269,6 +274,15 @@ async function handleTurnEnd() {
 function promptTurn() {
   if (gameOver) return;
 
+  if (isOnline) {
+    if (turn === myRole) {
+      $('status').textContent = myRole === 0 ? '👉 Your turn (Blue): Flick pen toward Right Goal!' : '👉 Your turn (Red): Flick pen toward Left Goal!';
+    } else {
+      $('status').textContent = '⏳ Opponent is aiming and flicking...';
+    }
+    return;
+  }
+
   if (turn === 0) {
     $('status').textContent = '👉 Player 1 (Blue): Flick pen toward the Right Goal!';
   } else if (vsBot) {
@@ -280,13 +294,16 @@ function promptTurn() {
 }
 
 function updateScores() {
-  $('score-tally').textContent = 'Player 1 (Blue): ' + scores[0] + '  ·  ' + (vsBot ? 'Bot (Red) 🤖' : 'Player 2 (Red)') + ': ' + scores[1];
+  const p2Name = isOnline ? 'Player 2 (Red)' : (vsBot ? 'Bot (Red) 🤖' : 'Player 2 (Red)');
+  $('score-tally').textContent = 'Player 1 (Blue): ' + scores[0] + '  ·  ' + p2Name + ': ' + scores[1];
 }
 
 function endGame() {
   gameOver = true;
-  const winner = scores[0] >= targetScore ? 'Player 1 (Blue)' : (vsBot ? 'Bot (Red) 🤖' : 'Player 2 (Red)');
+  const p2Name = isOnline ? 'Player 2 (Red)' : (vsBot ? 'Bot (Red) 🤖' : 'Player 2 (Red)');
+  const winner = scores[0] >= targetScore ? 'Player 1 (Blue)' : p2Name;
   $('status').textContent = '🏆 MATCH OVER! ' + winner + ' wins the tournament!';
+  if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
 }
 
 // ---------- CANVAS RENDERING ----------
@@ -455,7 +472,8 @@ if (typeof document !== 'undefined') {
 
   function onPointerDown(e) {
     if (isMoving || gameOver) return;
-    if (vsBot && turn === 1) return;
+    if (isOnline && turn !== myRole) return;
+    if (!isOnline && vsBot && turn === 1) return;
 
     const currentPen = pens[turn];
     const pos = getCanvasPos(e);
@@ -485,8 +503,14 @@ if (typeof document !== 'undefined') {
       const impulse = powerNorm * MAX_IMPULSE;
       const ux = dx / dist;
       const uy = dy / dist;
+      const fx = ux * impulse;
+      const fy = uy * impulse;
 
-      flickPen(turn, ux * impulse, uy * impulse);
+      flickPen(turn, fx, fy);
+
+      if (isOnline) {
+        onlineManager.sendMove({ type: 'flick', player: turn, fx, fy });
+      }
     }
     aimPos = null;
   }
@@ -513,7 +537,8 @@ if (typeof document !== 'undefined') {
     document.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('on', x === b));
   }));
 
-  $('start').onclick = () => {
+  function startLocalMatch() {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
     scores = [0, 0];
     gameOver = false;
     turn = 0;
@@ -522,23 +547,110 @@ if (typeof document !== 'undefined') {
     $('setup').style.display = 'none';
     $('game').style.display = '';
     promptTurn();
-  };
+  }
+
+  $('start').onclick = startLocalMatch;
 
   $('new-btn').onclick = () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
     scores = [0, 0];
     gameOver = false;
     turn = 0;
     resetPens();
     updateScores();
+    if (isOnline) {
+      onlineManager.sendMove({ type: 'restart' });
+    }
     promptTurn();
   };
 
   $('change-btn').onclick = () => {
+    if (isOnline && onlineManager) onlineManager.disconnect();
     $('game').style.display = 'none';
     $('setup').style.display = '';
+    $('online-wait-msg').style.display = 'none';
+    $('btn-create-room').disabled = false;
+    $('btn-create-room').textContent = "Create Room";
+    $('btn-join-room').disabled = false;
+    $('btn-join-room').textContent = "Join";
     renderSetup();
   };
 
+  // ---------- ONLINE SETUP ----------
+  function setupOnline() {
+    onlineManager = new OnlineManager('penfight', {
+      onPlayerJoined: () => {
+        $('online-wait-msg').style.display = 'none';
+        myRole = 0;
+        startLocalMatch();
+        $('status').textContent = "🎮 Opponent Joined! You are Blue (Defend Left).";
+      },
+      onMoveReceived: (data) => {
+        if (data.type === 'flick') {
+          flickPen(data.player, data.fx, data.fy);
+        } else if (data.type === 'restart') {
+          scores = [0, 0];
+          gameOver = false;
+          turn = 0;
+          resetPens();
+          updateScores();
+          promptTurn();
+        }
+      },
+      onRoomReady: (playerNum) => {
+        myRole = playerNum; // 0 = Blue, 1 = Red
+        if (!onlineManager.isHost) {
+          startLocalMatch();
+          $('status').textContent = "🎮 Connected to Host! You are Red (Defend Right).";
+        }
+      }
+    });
+
+    $('btn-create-room').onclick = async () => {
+      if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+      $('btn-create-room').disabled = true;
+      $('btn-create-room').textContent = "Creating...";
+      const code = await onlineManager.createRoom();
+      if (code) {
+        $('disp-room-code').textContent = code;
+        $('online-wait-msg').style.display = 'block';
+      } else {
+        $('btn-create-room').disabled = false;
+        $('btn-create-room').textContent = "Create Room";
+      }
+    };
+
+    $('btn-join-room').onclick = async () => {
+      if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+      const code = $('join-code-input').value.trim();
+      if (code.length !== 4) return alert("Please enter a 4-character code!");
+      $('btn-join-room').disabled = true;
+      $('btn-join-room').textContent = "...";
+      const ok = await onlineManager.joinRoom(code);
+      if (!ok) {
+        $('btn-join-room').disabled = false;
+        $('btn-join-room').textContent = "Join";
+      }
+    };
+  }
+
+  $('mode-local').onclick = () => {
+    isOnline = false;
+    $('mode-local').classList.add('on');
+    $('mode-online').classList.remove('on');
+    $('local-opts').style.display = '';
+    $('online-opts').style.display = 'none';
+  };
+
+  $('mode-online').onclick = () => {
+    isOnline = true;
+    $('mode-online').classList.add('on');
+    $('mode-local').classList.remove('on');
+    $('local-opts').style.display = 'none';
+    $('online-opts').style.display = '';
+  };
+
   renderSetup();
+  setupOnline();
   requestAnimationFrame(renderLoop);
 }

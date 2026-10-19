@@ -13,6 +13,11 @@ const ROLES = {
 const DEFAULT_SEATS = ['human', 'bot', 'bot', 'bot'];
 const PLAYER_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
 
+// ---------- ONLINE STATE ----------
+let isOnline = false;
+let onlineManager = null;
+let myRole = 0; // 0 = Player 1 (Host), 1 = Player 2, etc.
+
 // ---------- STATE ----------
 let totalRounds = 5;
 let currentRound = 1;
@@ -54,7 +59,6 @@ document.querySelectorAll('[data-rounds]').forEach(b => b.addEventListener('clic
 }));
 
 // ---------- FIXED SCATTER DESTINATIONS ----------
-// Guarantees 4 chits are placed at 4 distinct quadrants without overlapping or corner cut-offs
 function getChitPositions() {
   const table = $('table');
   const w = table.clientWidth || 540;
@@ -69,17 +73,25 @@ function getChitPositions() {
 }
 
 // ---------- ROUND WORKFLOW & TOSS ANIMATION ----------
-async function startRound() {
+async function startRound(syncedAssignment = null) {
   $('next-btn').style.display = 'none';
   $('round-bar').textContent = 'Round ' + currentRound + ' of ' + totalRounds;
 
-  // Shuffle roles among the 4 chits
-  const roleKeys = ['KING', 'MINISTER', 'SOLDIER', 'THIEF'];
-  for (let i = roleKeys.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [roleKeys[i], roleKeys[j]] = [roleKeys[j], roleKeys[i]];
+  if (syncedAssignment) {
+    currentAssignment = syncedAssignment;
+  } else {
+    // Shuffle roles among the 4 chits
+    const roleKeys = ['KING', 'MINISTER', 'SOLDIER', 'THIEF'];
+    for (let i = roleKeys.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [roleKeys[i], roleKeys[j]] = [roleKeys[j], roleKeys[i]];
+    }
+    currentAssignment = roleKeys;
+    if (isOnline) {
+      onlineManager.sendMove({ type: 'sync_round', round: currentRound, assignment: currentAssignment });
+    }
   }
-  currentAssignment = roleKeys;
+
   chitPickedBy = [-1, -1, -1, -1];
   activePicker = 0;
 
@@ -88,7 +100,6 @@ async function startRound() {
   promptNextPicker();
 }
 
-// Animates chits flying from table center to their respective scattered spots
 async function executeTossAnimation() {
   animatingToss = true;
   $('status').textContent = '🎲 Shuffling and tossing chits...';
@@ -101,7 +112,6 @@ async function executeTossAnimation() {
   const centerX = Math.round(tableW / 2 - 48);
   const centerY = Math.round(tableH / 2 - 34);
 
-  // Initialize all 4 chits stacked together at the center
   const chitElements = [];
   for (let i = 0; i < 4; i++) {
     const chit = document.createElement('div');
@@ -117,7 +127,6 @@ async function executeTossAnimation() {
 
   await sleep(250);
 
-  // Animate outward scatter to the four corners
   chitElements.forEach((chit, i) => {
     const pos = positions[i];
     chit.style.left = pos.left + 'px';
@@ -130,7 +139,6 @@ async function executeTossAnimation() {
   animatingToss = false;
 }
 
-// Updates instructions and controls turn sequence
 function promptNextPicker() {
   if (activePicker >= 4) {
     revealKingMinisterPhase();
@@ -140,12 +148,20 @@ function promptNextPicker() {
   const pName = PLAYER_NAMES[activePicker];
   const isBot = seatTypes[activePicker] === 'bot';
 
+  if (isOnline) {
+    if (activePicker === myRole) {
+      $('status').textContent = '👉 Your turn! Tap any remaining chit on the table.';
+    } else {
+      $('status').textContent = '⏳ ' + pName + ' is choosing a chit...';
+    }
+    return;
+  }
+
   if (!isBot) {
     $('status').textContent = '👉 ' + pName + ': Tap any of the 4 chits on the table!';
   } else {
     $('status').textContent = pName + ' 🤖 is choosing a chit...';
     setTimeout(() => {
-      // Pick any unpicked chit
       const available = [];
       chitPickedBy.forEach((takenBy, idx) => {
         if (takenBy === -1) available.push(idx);
@@ -160,11 +176,16 @@ function promptNextPicker() {
 
 function handleChitClick(chitIndex) {
   if (animatingToss) return;
-  // If chit is already taken, ignore
   if (chitPickedBy[chitIndex] !== -1) return;
-  // If active turn is bot, ignore click
-  if (seatTypes[activePicker] === 'bot') return;
 
+  if (isOnline) {
+    if (activePicker !== myRole) return;
+    executeChitPick(chitIndex, myRole);
+    onlineManager.sendMove({ type: 'pick_chit', chitIndex, playerIndex: myRole });
+    return;
+  }
+
+  if (seatTypes[activePicker] === 'bot') return;
   executeChitPick(chitIndex, activePicker);
 }
 
@@ -172,15 +193,14 @@ function executeChitPick(chitIndex, playerIndex) {
   chitPickedBy[chitIndex] = playerIndex;
   const roleKey = currentAssignment[chitIndex];
 
-  // Mark chit visually on table
   const chitEl = $('chit-' + chitIndex);
   if (chitEl) {
     chitEl.classList.add('picked');
     chitEl.innerHTML = '<div>📜 Chit ' + (chitIndex + 1) + '</div><span class="chit-tag">' + PLAYER_NAMES[playerIndex] + '</span>';
   }
 
-  const isHuman = seatTypes[playerIndex] === 'human';
-  if (isHuman) {
+  const showModal = isOnline ? (playerIndex === myRole) : (seatTypes[playerIndex] === 'human');
+  if (showModal) {
     showRoleRevealModal(playerIndex, roleKey, () => {
       activePicker++;
       promptNextPicker();
@@ -191,7 +211,6 @@ function executeChitPick(chitIndex, playerIndex) {
   }
 }
 
-// Secret modal popup to reveal role to human player
 function showRoleRevealModal(playerIdx, roleKey, onDismiss) {
   const table = $('table');
   const role = ROLES[roleKey];
@@ -236,8 +255,13 @@ function revealKingMinisterPhase() {
 }
 
 function promptMinisterGuess(ministerIdx, soldierIdx, thiefIdx) {
-  const isMinisterBot = seatTypes[ministerIdx] === 'bot';
+  const isMinisterBot = isOnline ? false : (seatTypes[ministerIdx] === 'bot');
   const suspects = [soldierIdx, thiefIdx].sort(() => Math.random() - 0.5);
+
+  if (isOnline && ministerIdx !== myRole) {
+    $('status').textContent = 'Minister (' + PLAYER_NAMES[ministerIdx] + ') is identifying the Thief...';
+    return;
+  }
 
   if (isMinisterBot) {
     $('status').textContent = 'Minister ' + PLAYER_NAMES[ministerIdx] + ' 🤖 is guessing who the Thief is...';
@@ -267,6 +291,9 @@ function promptMinisterGuess(ministerIdx, soldierIdx, thiefIdx) {
       btn.onclick = () => {
         const guessedIdx = +btn.dataset.suspect;
         overlay.remove();
+        if (isOnline) {
+          onlineManager.sendMove({ type: 'minister_guess', ministerIdx, guessedIdx, thiefIdx, soldierIdx });
+        }
         resolveRoundResult(ministerIdx, guessedIdx, thiefIdx, soldierIdx);
       };
     });
@@ -297,16 +324,18 @@ function resolveRoundResult(ministerIdx, guessedIdx, actualThiefIdx, soldierIdx)
   showAllRolesOnTable();
 
   if (currentRound < totalRounds) {
-    $('next-btn').style.display = 'inline-block';
-    $('next-btn').textContent = 'Next Round (' + (currentRound + 1) + '/' + totalRounds + ')';
+    if (!isOnline || myRole === 0) {
+      $('next-btn').style.display = 'inline-block';
+      $('next-btn').textContent = 'Next Round (' + (currentRound + 1) + '/' + totalRounds + ')';
+    } else {
+      $('status').textContent += ' (Waiting for Host to start next round...)';
+    }
   } else {
     finishGame();
   }
 }
 
 function showAllRolesOnTable() {
-  const positions = getChitPositions();
-
   for (let chitIdx = 0; chitIdx < 4; chitIdx++) {
     const playerIdx = chitPickedBy[chitIdx];
     const roleKey = currentAssignment[chitIdx];
@@ -328,7 +357,7 @@ function showAllRolesOnTable() {
 function renderScoreboard() {
   $('score-cards').innerHTML = PLAYER_NAMES.map((nm, i) =>
     '<div class="pcard"><span class="dot" style="background:#8d6e63"></span>' +
-    nm + (seatTypes[i] === 'bot' ? ' 🤖' : '') + ': <b>' + scores[i] + ' pts</b></div>'
+    nm + (!isOnline && seatTypes[i] === 'bot' ? ' 🤖' : '') + ': <b>' + scores[i] + ' pts</b></div>'
   ).join('');
 }
 
@@ -338,17 +367,85 @@ function finishGame() {
     if (s > highest) { highest = s; winner = i; }
   });
   $('status').textContent = '🏆 Game Over! ' + PLAYER_NAMES[winner] + ' wins with ' + highest + ' points!';
-  $('next-btn').style.display = 'inline-block';
-  $('next-btn').textContent = 'Play Again';
-  $('next-btn').onclick = () => {
-    scores = [0, 0, 0, 0];
-    currentRound = 1;
-    startRound();
+  if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
+
+  if (!isOnline || myRole === 0) {
+    $('next-btn').style.display = 'inline-block';
+    $('next-btn').textContent = 'Play Again';
+    $('next-btn').onclick = () => {
+      scores = [0, 0, 0, 0];
+      currentRound = 1;
+      if (isOnline) onlineManager.sendMove({ type: 'restart' });
+      startRound();
+    };
+  }
+}
+
+// ---------- ONLINE PROTOCOL ----------
+function setupOnline() {
+  onlineManager = new OnlineManager('chorsipahi', {
+    onPlayerJoined: () => {
+      $('online-wait-msg').style.display = 'none';
+      seatTypes = ['human', 'human', 'bot', 'bot'];
+      scores = [0, 0, 0, 0];
+      currentRound = 1;
+      $('setup').style.display = 'none';
+      $('game').style.display = '';
+      startRound();
+    },
+    onMoveReceived: (data) => {
+      if (data.type === 'sync_round') {
+        currentRound = data.round;
+        seatTypes = ['human', 'human', 'bot', 'bot'];
+        $('setup').style.display = 'none';
+        $('game').style.display = '';
+        startRound(data.assignment);
+      } else if (data.type === 'pick_chit') {
+        executeChitPick(data.chitIndex, data.playerIndex);
+      } else if (data.type === 'minister_guess') {
+        resolveRoundResult(data.ministerIdx, data.guessedIdx, data.thiefIdx, data.soldierIdx);
+      } else if (data.type === 'restart') {
+        scores = [0, 0, 0, 0];
+        currentRound = 1;
+        startRound();
+      }
+    },
+    onRoomReady: (playerNum) => {
+      myRole = playerNum;
+    }
+  });
+
+  $('btn-create-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    $('btn-create-room').disabled = true;
+    $('btn-create-room').textContent = "Creating...";
+    const code = await onlineManager.createRoom();
+    if (code) {
+      $('disp-room-code').textContent = code;
+      $('online-wait-msg').style.display = 'block';
+    } else {
+      $('btn-create-room').disabled = false;
+      $('btn-create-room').textContent = "Create Room";
+    }
+  };
+
+  $('btn-join-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    const code = $('join-code-input').value.trim();
+    if (code.length !== 4) return alert("Please enter a 4-character code!");
+    $('btn-join-room').disabled = true;
+    $('btn-join-room').textContent = "...";
+    const ok = await onlineManager.joinRoom(code);
+    if (!ok) {
+      $('btn-join-room').disabled = false;
+      $('btn-join-room').textContent = "Join";
+    }
   };
 }
 
 // ---------- BUTTON HANDLERS ----------
 $('start').onclick = () => {
+  if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
   scores = [0, 0, 0, 0];
   currentRound = 1;
   $('setup').style.display = 'none';
@@ -362,9 +459,32 @@ $('next-btn').onclick = () => {
 };
 
 $('change-btn').onclick = () => {
+  if (isOnline && onlineManager) onlineManager.disconnect();
   $('game').style.display = 'none';
   $('setup').style.display = '';
+  $('online-wait-msg').style.display = 'none';
+  $('btn-create-room').disabled = false;
+  $('btn-create-room').textContent = "Create Room";
+  $('btn-join-room').disabled = false;
+  $('btn-join-room').textContent = "Join";
   renderSetup();
 };
 
+$('mode-local').onclick = () => {
+  isOnline = false;
+  $('mode-local').classList.add('on');
+  $('mode-online').classList.remove('on');
+  $('local-opts').style.display = '';
+  $('online-opts').style.display = 'none';
+};
+
+$('mode-online').onclick = () => {
+  isOnline = true;
+  $('mode-online').classList.add('on');
+  $('mode-local').classList.remove('on');
+  $('local-opts').style.display = 'none';
+  $('online-opts').style.display = '';
+};
+
 renderSetup();
+setupOnline();

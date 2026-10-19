@@ -4,8 +4,16 @@ const cfg = { mode: 'bot', level: 'medium', wk: 1, balls: 0 };   // balls: 0 = u
 const tally = { p0: 0, p1: 0, tie: 0 };                          // wins across matches in this visit
 let S = null;                                                    // the current match
 
+// ---------- SUPABASE ONLINE MULTIPLAYER STATE ----------
+let onlineManager = null;
+let myRole = 0; // 0 = Player 1 (Host), 1 = Player 2 (Guest)
+let oppPickPending = null;
+
 const $ = id => document.getElementById(id);
-const nm = p => cfg.mode === 'bot' ? ['You', 'Bot'][p] : ['Player 1', 'Player 2'][p];
+const nm = p => {
+  if (cfg.mode === 'online') return p === myRole ? 'You' : (p === 0 ? 'Player 1' : 'Player 2');
+  return cfg.mode === 'bot' ? ['You', 'Bot'][p] : ['Player 1', 'Player 2'][p];
+};
 const freshPick = () => ({ stage: 0, vals: [null, null], cover: false });
 const rnd = () => 1 + Math.floor(Math.random() * 6);
 
@@ -17,30 +25,50 @@ function pickOption(attr, onChange) {
     onChange(b.dataset[attr]);
   }));
 }
-pickOption('mode', v => { cfg.mode = v; $('level-row').style.display = v === 'bot' ? '' : 'none'; });
+pickOption('mode', v => {
+  cfg.mode = v;
+  $('level-row').style.display = v === 'bot' ? '' : 'none';
+  $('online-opts').style.display = v === 'online' ? '' : 'none';
+  $('local-opts').style.display = v === 'online' ? 'none' : '';
+});
 pickOption('level', v => cfg.level = v);
 pickOption('wk', v => cfg.wk = +v);
 pickOption('balls', v => cfg.balls = +v);
 
-$('start').onclick = () => {
+function initMatchState() {
   S = {
     phase: 'tosscall', call: null, winner: 0, botChoice: null,
     innings: 1, batter: 0, runs: [0, 0], outs: [0, 0], balls: [0, 0],
     log: [], last: null, pick: freshPick(), result: '',
-    humanBat: [], humanBowl: []                                  // what the human played (the bot studies this)
+    humanBat: [], humanBowl: []
   };
   $('setup').style.display = 'none';
   $('game').style.display = '';
   render();
+}
+
+$('start').onclick = () => {
+  if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+  initMatchState();
 };
-$('quit').onclick = () => { S = null; $('game').style.display = 'none'; $('setup').style.display = ''; };
+
+$('quit').onclick = () => {
+  S = null;
+  if (cfg.mode === 'online' && onlineManager) onlineManager.disconnect();
+  $('game').style.display = 'none';
+  $('setup').style.display = '';
+  $('online-wait-msg').style.display = 'none';
+  $('btn-create-room').disabled = false;
+  $('btn-create-room').textContent = "Create Room";
+  $('btn-join-room').disabled = false;
+  $('btn-join-room').textContent = "Join";
+};
 
 // ---------- BOT BRAIN ----------
-// Guess how likely the human is to play each number (recent moves count more; Hard also learns "after X comes Y")
 function predict(arr, useChains, other) {
   const w = [0, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05];
   arr.forEach((x, i) => { w[x] += Math.pow(0.88, arr.length - 1 - i); });
-  (other || []).forEach(x => { w[x] += 0.4; });   // a person's favourite numbers show up in both roles
+  (other || []).forEach(x => { w[x] += 0.4; });
   if (useChains && arr.length > 1) {
     const last = arr[arr.length - 1];
     for (let i = 0; i < arr.length - 1; i++) if (arr[i] === last) w[arr[i + 1]] += 1.5;
@@ -54,25 +82,22 @@ function sample(p) {
   return 6;
 }
 
-// The bot's number for this ball
 function botNumber() {
-  if (S.phase !== 'play') return rnd();                          // the toss is pure luck
+  if (S.phase !== 'play') return rnd();
   const lvl = cfg.level, botBats = S.batter === 1;
   if (!botBats) {
-    // Bot bowls: it wins by matching the human's batting number, so it tries to guess it
     const p = predict(S.humanBat, lvl === 'hard', lvl === 'easy' ? [] : S.humanBowl);
     const q = lvl === 'easy' ? 0.12 : lvl === 'medium' ? 0.45 : 0.85;
     if (Math.random() > q) return rnd();
     let best = 1; for (let n = 2; n <= 6; n++) if (p[n] > p[best]) best = n;
     return lvl === 'hard' && Math.random() < 0.3 ? sample(p) : best;
   }
-  // Bot bats: it wants big numbers that the human is unlikely to bowl
   if (lvl === 'easy') return rnd();
   const p = predict(S.humanBowl, lvl === 'hard', S.humanBat);
   if (lvl === 'medium' && Math.random() < 0.5) return rnd();
   if (lvl === 'hard' && Math.random() < 0.12) return rnd();
-  const need = S.innings === 2 ? S.runs[0] + 1 - S.runs[1] : 99;   // runs the bot still needs to win
-  if (lvl === 'hard' && need >= 1 && need <= 6 && p[need] < 0.3) return need;   // finish the chase
+  const need = S.innings === 2 ? S.runs[0] + 1 - S.runs[1] : 99;
+  if (lvl === 'hard' && need >= 1 && need <= 6 && p[need] < 0.3) return need;
   let best = 1, bestVal = -1;
   for (let n = 1; n <= 6; n++) { const v = n * (1 - p[n]); if (v > bestVal) { bestVal = v; best = n; } }
   return best;
@@ -81,9 +106,28 @@ function botNumber() {
 // ---------- MATCH LOGIC ----------
 function onPick(n) {
   const pk = S.pick;
-  if (cfg.mode === 'bot') { pk.vals[0] = n; pk.vals[1] = botNumber(); }
-  else if (pk.stage === 0) { pk.vals[0] = n; pk.stage = 1; pk.cover = true; render(); return; }   // hide the choice, pass the device
-  else pk.vals[1] = n;
+  if (cfg.mode === 'online') {
+    pk.vals[myRole] = n;
+    onlineManager.sendMove({ type: 'pick', phase: S.phase, role: myRole, val: n });
+    if (oppPickPending !== null) {
+      pk.vals[1 - myRole] = oppPickPending;
+      oppPickPending = null;
+    } else {
+      render();
+      return;
+    }
+  } else if (cfg.mode === 'bot') {
+    pk.vals[0] = n;
+    pk.vals[1] = botNumber();
+  } else if (pk.stage === 0) {
+    pk.vals[0] = n;
+    pk.stage = 1;
+    pk.cover = true;
+    render();
+    return;
+  } else {
+    pk.vals[1] = n;
+  }
 
   if (S.phase === 'tosspick') return resolveToss();
   resolveBall(pk.vals[S.batter], pk.vals[1 - S.batter]);
@@ -101,7 +145,7 @@ function resolveToss() {
 
 function resolveBall(b, w) {
   const bt = S.batter;
-  if (cfg.mode === 'bot') (bt === 0 ? S.humanBat : S.humanBowl).push(S.pick.vals[0]);   // remember what the human played
+  if (cfg.mode === 'bot') (bt === 0 ? S.humanBat : S.humanBowl).push(S.pick.vals[0]);
   S.balls[bt]++;
   let text, out = false;
   if (b === w) { S.outs[bt]++; out = true; S.log.push('W'); text = 'OUT! Both showed ' + b; }
@@ -115,7 +159,7 @@ function resolveBall(b, w) {
 }
 
 function finish() {
-  const c = S.batter, f = 1 - c;                                 // c = chasing side, f = side that batted first
+  const c = S.batter, f = 1 - c;
   if (S.runs[c] > S.runs[f]) {
     const left = cfg.wk - S.outs[c];
     S.result = nm(c) + (nm(c) === 'You' ? ' win' : ' wins') + ' by ' + left + ' wicket' + (left > 1 ? 's' : '') + '!';
@@ -126,6 +170,7 @@ function finish() {
     tally['p' + f]++;
   } else { S.result = "It's a tie!"; tally.tie++; }
   S.phase = 'done';
+  if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
 }
 
 // ---------- DRAWING ----------
@@ -165,35 +210,121 @@ function render() {
   let h = scoreboard() + lastHTML();
   const pk = S.pick;
   if (S.phase === 'tosscall') {
-    h += '<div id="status">🪙 Toss time!</div><div class="note" style="font-size:16px;opacity:1">' + nm(0) + (nm(0) === 'You' ? ', call' : ' calls') + ' Odd or Even. We add both numbers.</div>' +
-      '<div class="actions"><button class="cta" data-act="call" data-v="odd">Odd</button><button class="cta" data-act="call" data-v="even">Even</button></div>';
+    const isCaller = cfg.mode === 'online' ? myRole === 0 : true;
+    h += '<div id="status">🪙 Toss time!</div><div class="note" style="font-size:16px;opacity:1">' + nm(0) + (nm(0) === 'You' ? ', call' : ' calls') + ' Odd or Even. We add both numbers.</div>';
+    if (isCaller) {
+      h += '<div class="actions"><button class="cta" data-act="call" data-v="odd">Odd</button><button class="cta" data-act="call" data-v="even">Even</button></div>';
+    } else {
+      h += '<div class="note" style="color:#ff9f0a">Waiting for Player 1 to call...</div>';
+    }
   } else if (S.phase === 'tosspick' || S.phase === 'play') {
-    if (cfg.mode === 'local' && pk.cover) {
+    if (cfg.mode === 'online' && pk.vals[myRole] !== null) {
+      h += '<div id="status">' + (S.phase === 'play' ? 'Innings ' + S.innings : 'Toss') + '</div>' +
+        '<div class="cover">⏳ Choice locked (' + pk.vals[myRole] + ')!<br>Waiting for opponent to pick...</div>';
+    } else if (cfg.mode === 'local' && pk.cover) {
       h += '<div class="cover">🙈 ' + nm(0) + ' has chosen.<br>Pass the device to ' + nm(1) + '.<div class="actions"><button class="cta" data-act="ready">I am ' + nm(1) + ', ready</button></div></div>';
     } else {
       let title;
-      if (S.phase === 'tosspick') title = cfg.mode === 'bot' ? 'Pick a number for the toss' : nm(pk.stage) + ': pick a number secretly';
-      else if (cfg.mode === 'bot') title = S.batter === 0 ? '🏏 You are batting. Pick a number the bowler will not match!' : '⚾ You are bowling. Guess the bot\'s number!';
+      if (S.phase === 'tosspick') title = (cfg.mode === 'bot' || cfg.mode === 'online') ? 'Pick a number for the toss' : nm(pk.stage) + ': pick a number secretly';
+      else if (cfg.mode === 'bot' || cfg.mode === 'online') title = S.batter === myRole ? '🏏 You are batting. Pick a number the bowler will not match!' : '⚾ You are bowling. Guess the batsman\'s number!';
       else title = nm(pk.stage) + (pk.stage === S.batter ? ' (batting)' : ' (bowling)') + ': pick secretly';
       h += '<div id="status">' + (S.phase === 'play' ? 'Innings ' + S.innings : 'Toss') + '</div>' + padHTML(title);
     }
   } else if (S.phase === 'tosschoice') {
     const w = S.winner;
+    const canChoose = cfg.mode === 'online' ? myRole === w : (cfg.mode === 'bot' ? w === 0 : true);
     if (cfg.mode === 'bot' && w === 1) {
       h += '<div class="note" style="font-size:16px;opacity:1">The bot chose to ' + S.botChoice + ' first.</div><div class="actions"><button class="cta" data-act="choose" data-v="' + S.botChoice + '">Start the match</button></div>';
-    } else {
+    } else if (canChoose) {
       h += '<div id="status">' + nm(w) + (nm(w) === 'You' ? ', choose' : ' chooses') + '</div><div class="actions"><button class="cta" data-act="choose" data-v="bat">🏏 Bat first</button><button class="cta" data-act="choose" data-v="bowl">⚾ Bowl first</button></div>';
+    } else {
+      h += '<div id="status">' + nm(w) + ' won the toss!</div><div class="note" style="color:#ff9f0a">Waiting for ' + nm(w) + ' to choose bat/bowl...</div>';
     }
   } else if (S.phase === 'innbreak') {
     const b = S.batter;
-    h += '<div id="status">Innings over!</div><div class="note" style="font-size:16px;opacity:1">' + nm(b) + ' scored ' + S.runs[b] + '/' + S.outs[b] + '. Target: <b>' + (S.runs[b] + 1) + '</b></div>' +
-      '<div class="actions"><button class="cta" data-act="next">Start the chase</button></div>';
+    h += '<div id="status">Innings over!</div><div class="note" style="font-size:16px;opacity:1">' + nm(b) + ' scored ' + S.runs[b] + '/' + S.outs[b] + '. Target: <b>' + (S.runs[b] + 1) + '</b></div>';
+    if (cfg.mode !== 'online' || myRole === 0) {
+      h += '<div class="actions"><button class="cta" data-act="next">Start the chase</button></div>';
+    } else {
+      h += '<div class="note" style="color:#ff9f0a">Waiting for Host to start chase...</div>';
+    }
   } else if (S.phase === 'done') {
     h += '<div id="status">🎉 ' + S.result + '</div>' +
-      '<div class="scores"><span>' + nm(0) + ': ' + tally.p0 + ' wins</span><span>Ties: ' + tally.tie + '</span><span>' + nm(1) + ': ' + tally.p1 + ' wins</span></div>' +
-      '<div class="actions"><button class="cta" data-act="again">Play again</button></div>';
+      '<div class="scores"><span>' + nm(0) + ': ' + tally.p0 + ' wins</span><span>Ties: ' + tally.tie + '</span><span>' + nm(1) + ': ' + tally.p1 + ' wins</span></div>';
+    if (cfg.mode !== 'online' || myRole === 0) {
+      h += '<div class="actions"><button class="cta" data-act="again">Play again</button></div>';
+    }
   }
   $('cstage').innerHTML = h;
+}
+
+// ---------- SUPABASE ONLINE PROTOCOL ----------
+function setupOnline() {
+  onlineManager = new OnlineManager('cricket', {
+    onPlayerJoined: () => {
+      $('online-wait-msg').style.display = 'none';
+      onlineManager.sendMove({ type: 'start_config', wk: cfg.wk, balls: cfg.balls });
+      initMatchState();
+    },
+    onMoveReceived: (data) => {
+      if (data.type === 'start_config') {
+        cfg.wk = data.wk;
+        cfg.balls = data.balls;
+        initMatchState();
+      } else if (data.type === 'call') {
+        S.call = data.v;
+        S.phase = 'tosspick';
+        S.pick = freshPick();
+        render();
+      } else if (data.type === 'pick') {
+        if (S.pick.vals[myRole] !== null) {
+          S.pick.vals[data.role] = data.val;
+          if (S.phase === 'tosspick') resolveToss();
+          else resolveBall(S.pick.vals[S.batter], S.pick.vals[1 - S.batter]);
+        } else {
+          oppPickPending = data.val;
+        }
+      } else if (data.type === 'choose') {
+        const first = data.v === 'bat' ? S.winner : 1 - S.winner;
+        S.batter = first; S.last = null; S.log = []; S.phase = 'play'; S.pick = freshPick(); render();
+      } else if (data.type === 'next') {
+        S.innings = 2; S.batter = 1 - S.batter; S.log = []; S.last = null; S.phase = 'play'; S.pick = freshPick(); render();
+      } else if (data.type === 'again') {
+        Object.assign(S, { phase: 'tosscall', call: null, innings: 1, batter: 0, runs: [0, 0], outs: [0, 0], balls: [0, 0], log: [], last: null, pick: freshPick(), result: '' });
+        render();
+      }
+    },
+    onRoomReady: (playerNum) => {
+      myRole = playerNum;
+    }
+  });
+
+  $('btn-create-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    $('btn-create-room').disabled = true;
+    $('btn-create-room').textContent = "Creating...";
+    const code = await onlineManager.createRoom();
+    if (code) {
+      $('disp-room-code').textContent = code;
+      $('online-wait-msg').style.display = 'block';
+    } else {
+      $('btn-create-room').disabled = false;
+      $('btn-create-room').textContent = "Create Room";
+    }
+  };
+
+  $('btn-join-room').onclick = async () => {
+    if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+    const code = $('join-code-input').value.trim();
+    if (code.length !== 4) return alert("Please enter a 4-character code!");
+    $('btn-join-room').disabled = true;
+    $('btn-join-room').textContent = "...";
+    const ok = await onlineManager.joinRoom(code);
+    if (!ok) {
+      $('btn-join-room').disabled = false;
+      $('btn-join-room').textContent = "Join";
+    }
+  };
 }
 
 // ---------- CLICKS ----------
@@ -201,16 +332,31 @@ $('cstage').addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (!b || !S) return;
   const a = b.dataset.act, v = b.dataset.v;
-  if (a === 'call') { S.call = v; S.phase = 'tosspick'; S.pick = freshPick(); render(); }
+  if (a === 'call') {
+    S.call = v;
+    S.phase = 'tosspick';
+    S.pick = freshPick();
+    if (cfg.mode === 'online') onlineManager.sendMove({ type: 'call', v });
+    render();
+  }
   else if (a === 'num') onPick(+v);
   else if (a === 'ready') { S.pick.cover = false; render(); }
   else if (a === 'choose') {
-    const first = v === 'bat' ? S.winner : 1 - S.winner;        // who bats first
-    S.batter = first; S.last = null; S.log = []; S.phase = 'play'; S.pick = freshPick(); render();
+    const first = v === 'bat' ? S.winner : 1 - S.winner;
+    S.batter = first; S.last = null; S.log = []; S.phase = 'play'; S.pick = freshPick();
+    if (cfg.mode === 'online') onlineManager.sendMove({ type: 'choose', v });
+    render();
   }
-  else if (a === 'next') { S.innings = 2; S.batter = 1 - S.batter; S.log = []; S.last = null; S.phase = 'play'; S.pick = freshPick(); render(); }
+  else if (a === 'next') {
+    S.innings = 2; S.batter = 1 - S.batter; S.log = []; S.last = null; S.phase = 'play'; S.pick = freshPick();
+    if (cfg.mode === 'online') onlineManager.sendMove({ type: 'next' });
+    render();
+  }
   else if (a === 'again') {
     Object.assign(S, { phase: 'tosscall', call: null, innings: 1, batter: 0, runs: [0, 0], outs: [0, 0], balls: [0, 0], log: [], last: null, pick: freshPick(), result: '' });
+    if (cfg.mode === 'online') onlineManager.sendMove({ type: 'again' });
     render();
   }
 });
+
+setupOnline();
