@@ -169,6 +169,7 @@ function botTurn() {
 function setupOnline() {
   onlineManager = new OnlineManager('chess', {
     onPlayerJoined: () => {
+      showGame();
       document.getElementById('online-wait-msg').style.display = 'none';
       myRole = 'w';
       flipped = false;
@@ -186,6 +187,7 @@ function setupOnline() {
       myRole = playerNum === 0 ? 'w' : 'b';
       flipped = myRole === 'b'; // Black auto-flips board for guest
       if (!onlineManager.isHost) {
+        showGame();
         document.getElementById('online-wait-msg').style.display = 'none';
         newGame(true);
         statusEl.textContent = "🎮 Connected to Host! White to move (Opponent's turn)...";
@@ -256,23 +258,46 @@ document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click'
     document.getElementById('btn-join-room').disabled = false;
     document.getElementById('btn-join-room').textContent = "Join";
   }
-
-  newGame();
+  document.getElementById('start-row').style.display = mode === 'online' ? 'none' : '';
 }));
 
 document.querySelectorAll('[data-level]').forEach(b => b.addEventListener('click', () => {
   level = b.dataset.level;
   document.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('on', x === b));
-  newGame();
 }));
 
 document.querySelectorAll('[data-side]').forEach(b => b.addEventListener('click', () => {
   human = b.dataset.side;
   document.querySelectorAll('[data-side]').forEach(x => x.classList.toggle('on', x === b));
-  newGame();
 }));
 
 document.getElementById('new').onclick = () => newGame();
+
+// ---------- SETTINGS FIRST, THEN THE GAME ----------
+function showGame() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = '';
+}
+function showSetup() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('setup').style.display = '';
+}
+document.getElementById('start').onclick = () => {
+  if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;   // same guest-pass check as before
+  showGame();
+  newGame();
+};
+document.getElementById('change').onclick = () => {
+  if (mode === 'online' && onlineManager) {
+    onlineManager.disconnect();
+    document.getElementById('online-wait-msg').style.display = 'none';
+    document.getElementById('btn-create-room').disabled = false;
+    document.getElementById('btn-create-room').textContent = "Create Room";
+    document.getElementById('btn-join-room').disabled = false;
+    document.getElementById('btn-join-room').textContent = "Join";
+  }
+  showSetup();
+};
 document.getElementById('undo').onclick = () => {
   if (thinking || mode === 'online') return;
   game.undo();

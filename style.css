@@ -315,3 +315,36 @@ html, body {
     padding: 0 16px !important;
   }
 }
+
+/* 9. PHONE FIX: the top bar was locked to 52px high with no wrapping, so on a phone the
+      "Unlimited Access" pill and the name/Sign out button spilled out over the menu below.
+      On small screens the bar can now grow taller and the items wrap onto a second line. */
+@media (max-width: 640px) {
+  .topbar {
+    height: auto !important;
+    min-height: 52px !important;
+    max-height: none !important;
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+    padding: 8px 14px !important;
+  }
+  .topbar .logo,
+  .topbar a.logo {
+    height: auto !important;
+    line-height: 1.2 !important;
+  }
+  .topbar .topright {
+    height: auto !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    white-space: normal !important;
+    max-width: 100% !important;
+  }
+  .topbar .pill,
+  .topbar .topright button {
+    font-size: 12px !important;
+    padding: 5px 10px !important;
+    white-space: nowrap !important;
+  }
+}

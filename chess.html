@@ -59,7 +59,7 @@
 
   <div class="gamehead"><h1>♞ Chess</h1></div>
 
-  <div class="panel glass">
+  <div class="panel glass" id="setup">
     <div class="row"><b>Mode</b>
       <button data-mode="bot" class="on">vs Bot</button>
       <button data-mode="local">Same device</button>
@@ -98,15 +98,18 @@
       <button data-side="w" class="on">White</button>
       <button data-side="b">Black</button>
     </div>
+    <!-- Start button: settings first, then the game appears (hidden while playing online, the room code starts that) -->
+    <div class="actions" id="start-row"><button class="cta" id="start">Start game</button></div>
   </div>
 
-  <div class="stage glass">
+  <div class="stage glass" id="game" style="display:none">
     <div id="status">White to move</div>
     <div class="chess" id="board"></div>
     <div class="actions">
       <button id="new">New game</button>
       <button id="undo">Undo</button>
       <button id="flip">Flip board</button>
+      <button id="change">Change settings</button>
     </div>
   </div>
 

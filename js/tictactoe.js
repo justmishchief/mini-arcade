@@ -3,8 +3,10 @@
 const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 let cells, turn, over;
 let mode = 'bot';      // 'bot', 'local', or 'online'
-let level = 'hard';    // 'easy' or 'hard'
+let level = 'medium';  // 'easy', 'medium' or 'hard'
 const score = { X:0, O:0, draw:0 };
+let roundId = 0;       // changes every round, so a late bot move from an old round is ignored
+let skill = 0.5;       // how well the human plays (0 = badly, 1 = perfectly). The Medium bot adapts to this.
 
 // ---------- ONLINE STATE ----------
 let onlineManager = null;
@@ -38,18 +40,49 @@ function minimax(b, isO) {
   return best;
 }
 
-// Easy: random free cell. Hard: the move with the best minimax score.
-function botMove() {
-  const free = cells.map((v, i) => v ? null : i).filter(i => i !== null);
-  if (level === 'easy') return free[Math.floor(Math.random() * free.length)];
-  let bestScore = -2, bestMove = free[0];
-  for (const i of free) {
+function freeCells() { return cells.map((v, i) => v ? null : i).filter(i => i !== null); }
+
+// The strongest move for the bot (full brain)
+function bestBotMove() {
+  let bestScore = -2, bestMoves = [];
+  for (const i of freeCells()) {
     cells[i] = 'O';
     const s = minimax(cells, false);
     cells[i] = '';
-    if (s > bestScore) { bestScore = s; bestMove = i; }
+    if (s > bestScore) { bestScore = s; bestMoves = [i]; }
+    else if (s === bestScore) bestMoves.push(i);
   }
-  return bestMove;
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+// Was the human's move one of the best available moves? Used to measure the human's level.
+function humanMoveWasBest(i) {
+  const scoreOf = k => { cells[k] = 'X'; const s = minimax(cells, true); cells[k] = ''; return s; };
+  const best = Math.min(...freeCells().map(scoreOf));   // X wants the lowest score
+  return scoreOf(i) === best;
+}
+
+// Chance that the bot plays its best move this turn:
+//   Easy   = 30% of the time (otherwise a random move)
+//   Medium = depends on how well the human has been playing (25% to 95%)
+//   Hard   = always
+function botMove() {
+  let p = 1;
+  if (level === 'easy') p = 0.3;
+  else if (level === 'medium') p = 0.25 + 0.7 * skill;
+  if (Math.random() < p) return bestBotMove();
+  const free = freeCells();
+  return free[Math.floor(Math.random() * free.length)];
+}
+
+// Small line under the level buttons
+function updateNote() {
+  const note = document.getElementById('level-note');
+  if (!note) return;
+  if (mode !== 'bot') { note.textContent = ''; return; }
+  if (level === 'easy') note.textContent = 'Easy: the bot plays smart only now and then.';
+  else if (level === 'hard') note.textContent = 'Hard: the bot uses its full brain. You can only draw.';
+  else note.textContent = 'Medium: the bot matches your level (it thinks you play at ' + Math.round(skill * 100) + '%).';
 }
 
 // ---------- UI ----------
@@ -97,6 +130,10 @@ function play(i, fromRemote = false) {
   if (mode === 'bot' && turn !== 'X') return;    // ignore clicks while the bot is thinking
   if (mode === 'online' && !fromRemote && turn !== myRole) return; // not your turn online
 
+  if (mode === 'bot') {                          // measure how good the human's move is (Medium bot uses this)
+    skill = 0.7 * skill + 0.3 * (humanMoveWasBest(i) ? 1 : 0);
+    updateNote();
+  }
   cells[i] = turn;
 
   if (mode === 'online' && !fromRemote) {
@@ -110,7 +147,9 @@ function play(i, fromRemote = false) {
 
   if (mode === 'bot') {
     statusEl.textContent = 'Bot is thinking...';
+    const rid = roundId;
     setTimeout(() => {                           // small delay so the bot feels natural
+      if (rid !== roundId) return;               // the round was restarted meanwhile
       cells[botMove()] = 'O';
       r = check(cells);
       if (r) return finish(r);
@@ -125,9 +164,11 @@ function play(i, fromRemote = false) {
 
 // Start a fresh round (scores are kept)
 function reset(fromRemote = false) {
+  roundId++;
   cells = Array(9).fill('');
   turn = 'X'; over = false;
   statusEl.textContent = turnText();
+  updateNote();
   render();
 
   if (mode === 'online' && !fromRemote && onlineManager) {
@@ -139,6 +180,7 @@ function reset(fromRemote = false) {
 function setupOnline() {
   onlineManager = new OnlineManager('tictactoe', {
     onPlayerJoined: () => {
+      showGame();
       document.getElementById('online-wait-msg').style.display = 'none';
       myRole = 'X';
       reset(true);
@@ -154,6 +196,7 @@ function setupOnline() {
     onRoomReady: (playerNum) => {
       myRole = playerNum === 0 ? 'X' : 'O';
       if (!onlineManager.isHost) {
+        showGame();
         document.getElementById('online-wait-msg').style.display = 'none';
         reset(true);
         statusEl.textContent = "🎮 Connected to Host! Opponent's turn (X)...";
@@ -208,18 +251,45 @@ document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click'
     document.getElementById('btn-join-room').disabled = false;
     document.getElementById('btn-join-room').textContent = "Join";
   }
-
+  document.getElementById('start-row').style.display = mode === 'online' ? 'none' : '';
   reset();
 }));
 
-// Bot level buttons (Easy / Hard)
+// Bot level buttons (Easy / Medium / Hard)
 document.querySelectorAll('[data-level]').forEach(b => b.addEventListener('click', () => {
   level = b.dataset.level;
   document.querySelectorAll('[data-level]').forEach(x => x.classList.toggle('on', x === b));
-  reset();
+  updateNote();
 }));
 
 document.getElementById('reset').onclick = () => reset();
+
+// ---------- SETTINGS FIRST, THEN THE GAME ----------
+function showGame() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = '';
+}
+function showSetup() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('setup').style.display = '';
+}
+document.getElementById('start').onclick = () => {
+  if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;   // same guest-pass check as before
+  showGame();
+  reset();
+};
+document.getElementById('change').onclick = () => {
+  roundId++;                                               // cancel any bot move that is still pending
+  if (mode === 'online' && onlineManager) {
+    onlineManager.disconnect();
+    document.getElementById('online-wait-msg').style.display = 'none';
+    document.getElementById('btn-create-room').disabled = false;
+    document.getElementById('btn-create-room').textContent = "Create Room";
+    document.getElementById('btn-join-room').disabled = false;
+    document.getElementById('btn-join-room').textContent = "Join";
+  }
+  showSetup();
+};
 
 reset();   // start the first round
 setupOnline();
