@@ -14,7 +14,7 @@
 
   const GUEST_MATCH_LIMIT = 10;
 
-  // Har device ka unique fingerprint
+  // Unique identifier per device instance
   let deviceId = localStorage.getItem('arcade_device_id');
   if (!deviceId) {
     deviceId = 'dev_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
@@ -51,7 +51,7 @@
       this.injectSettingsModal();
       this.injectConfirmModal();
 
-      // Browser cache / navigation sync
+      // Synchronize state across browser caching and back/forward navigation
       window.addEventListener('pageshow', () => {
         this.updateTopBar();
         this.refreshCloudProfile();
@@ -95,14 +95,22 @@
       });
     },
 
-    // Phone / Mobile Top-Left Back Arrow
+    // Clean, aligned top-left Back Arrow for game pages
     injectMobileBackBtn: function() {
       const topbar = document.querySelector('.topbar');
+      const logo = document.querySelector('.topbar .logo');
       if (!topbar || document.getElementById('mobile-back-arrow')) return;
 
       const path = window.location.pathname;
       const isHome = path.endsWith('index.html') || path === '/' || path === '';
       if (!isHome) {
+        // Enforce balanced single-row flex layout on the topbar
+        topbar.style.display = 'flex';
+        topbar.style.alignItems = 'center';
+        topbar.style.justifyContent = 'space-between';
+        topbar.style.flexWrap = 'nowrap';
+        topbar.style.gap = '8px';
+
         const arrow = document.createElement('a');
         arrow.id = 'mobile-back-arrow';
         arrow.href = 'index.html';
@@ -110,12 +118,20 @@
         arrow.setAttribute('aria-label', 'Back to Arcade Home');
         arrow.style.cssText = `
           display: inline-flex; align-items: center; justify-content: center;
-          width: 34px; height: 34px; border-radius: 50%;
+          width: 32px; height: 32px; border-radius: 50%;
           background: rgba(0,0,0,0.06); color: var(--ink, #1c1c1e);
-          text-decoration: none; font-size: 20px; font-weight: 700;
-          margin-right: 8px; flex-shrink: 0;
+          text-decoration: none; font-size: 18px; font-weight: 700;
+          margin-right: 6px; flex-shrink: 0; line-height: 1;
         `;
-        topbar.prepend(arrow);
+
+        if (logo) {
+          // Group the back arrow cleanly adjacent to the logo
+          logo.style.display = 'inline-flex';
+          logo.style.alignItems = 'center';
+          logo.parentElement.insertBefore(arrow, logo);
+        } else {
+          topbar.prepend(arrow);
+        }
       }
     },
 
@@ -132,7 +148,7 @@
           last_active: new Date().toISOString()
         });
       } catch (e) {
-        // fail-safe
+        // Fail-safe handling for uninitialized tables
       }
     },
 
@@ -668,11 +684,11 @@
       document.getElementById('set-uname-msg').textContent = '';
       document.getElementById('set-pwd-msg').textContent = '';
 
-      // Live Fetch Active Devices List from Supabase
+      // Live fetch active devices list from Supabase
       const devListEl = document.getElementById('set-devices-list');
       if (devListEl && client && this.currentUser) {
         try {
-          // Pichhle 10 minute ke active sessions
+          // Identify devices active in the last 10 minutes
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: devices } = await client
             .from('user_devices')
