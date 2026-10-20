@@ -12,7 +12,7 @@
     window.supabaseClient = client;
   }
 
-  const GUEST_MATCH_LIMIT = 5;
+  const GUEST_MATCH_LIMIT = 10;
 
   const ArcadeAuth = {
     currentUser: null,
@@ -23,6 +23,18 @@
       this.injectSettingsModal();
       this.injectConfirmModal();
       this.updateTopBar();
+
+      // Browser back/forward button (bfcache) se aane par live sync
+      window.addEventListener('pageshow', () => this.updateTopBar());
+      window.addEventListener('popstate', () => this.updateTopBar());
+
+      // Window focus aur alag tabs/windows ke storage updates sync
+      window.addEventListener('focus', () => this.updateTopBar());
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'mini_arcade_plays' || e.key === 'arcade_total_plays') {
+          this.updateTopBar();
+        }
+      });
 
       if (!client) return;
 
@@ -52,7 +64,7 @@
           .from('profiles')
           .select('username')
           .eq('id', this.currentUser.id)
-          .single();
+          .maybeSingle();
 
         if (data && data.username) {
           this.currentUsername = data.username;
@@ -74,14 +86,13 @@
       localStorage.setItem('arcade_total_plays', totalPlays);
       localStorage.setItem('arcade_total_wins', totalWins);
 
-      // Leaderboard Sync for Logged in players
       if (this.currentUser) {
         try {
           const { data } = await client
             .from('profiles')
             .select('wins, matches, score')
             .eq('id', this.currentUser.id)
-            .single();
+            .maybeSingle();
 
           if (data) {
             await client.from('profiles').update({
@@ -97,23 +108,24 @@
         return true;
       }
 
-      let plays = this.getGuestPlays() + 1;
-      localStorage.setItem('mini_arcade_plays', plays);
       this.updateTopBar();
-
-      if (plays >= GUEST_MATCH_LIMIT) {
-        this.showModal(true);
-        return false;
-      }
       return true;
     },
 
     canPlay: function() {
       if (this.currentUser) return true;
-      if (this.getGuestPlays() >= GUEST_MATCH_LIMIT) {
+
+      let plays = this.getGuestPlays();
+      if (plays >= GUEST_MATCH_LIMIT) {
         this.showModal(true);
         return false;
       }
+
+      // Tap karte hi deduct (-1) aur live bar update
+      plays++;
+      localStorage.setItem('mini_arcade_plays', plays.toString());
+      this.updateTopBar();
+
       return true;
     },
 
@@ -141,7 +153,7 @@
         signInBtn.onclick = () => this.showModal(false);
 
         if (onlinePill) {
-          onlinePill.innerHTML = `● ${left} guest passes left`;
+          onlinePill.innerHTML = `● ${left} guest ${left === 1 ? 'pass' : 'passes'} left`;
         }
       }
     },
@@ -158,22 +170,22 @@
       `;
 
       modal.innerHTML = `
-        <div style="background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); border-radius: 24px; padding: 28px 24px; max-width: 360px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; border: 1px solid rgba(255,255,255,0.4); font-family: 'Inter', sans-serif;">
+        <div style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 24px; padding: 28px 24px; max-width: 360px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; border: 1px solid rgba(255,255,255,0.4); font-family: 'Inter', sans-serif;">
           <div style="font-size: 40px; margin-bottom: 6px;">🕹️</div>
           <h2 id="auth-title" style="margin: 0 0 6px; font-size: 22px; color: #1c1c1e;">Welcome to Mini Arcade</h2>
           <p id="auth-desc" style="font-size: 13px; color: #636366; margin: 0 0 18px;">Sign in or register to track stats and enjoy unlimited gaming.</p>
 
           <form id="auth-form" style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="text" id="auth-username" placeholder="Gamer Username (unique)" style="display:none; padding: 12px 14px; border-radius: 12px; border: 1px solid #d1d1d6; font-size: 14px; outline: none; background:#fff; color:#000;">
-            <input type="email" id="auth-email" placeholder="Email address" required style="padding: 12px 14px; border-radius: 12px; border: 1px solid #d1d1d6; font-size: 14px; outline: none; background:#fff; color:#000;">
+            <input type="text" id="auth-username" placeholder="Pick a Gamer Username (unique)" style="display:none; padding: 12px 14px; border-radius: 12px; border: 1px solid #d1d1d6; font-size: 14px; outline: none; background:#fff; color:#000;">
+            <input type="text" id="auth-identifier" placeholder="Email or Username" required style="padding: 12px 14px; border-radius: 12px; border: 1px solid #d1d1d6; font-size: 14px; outline: none; background:#fff; color:#000;">
             <input type="password" id="auth-password" placeholder="Password (min 6 chars)" required minlength="6" style="padding: 12px 14px; border-radius: 12px; border: 1px solid #d1d1d6; font-size: 14px; outline: none; background:#fff; color:#000;">
             <div id="auth-msg" style="font-size: 12px; color: #ff3b30; min-height: 16px;"></div>
-            <button type="submit" id="auth-submit-btn" style="padding: 12px; border-radius: 12px; background: #007aff; color: #fff; font-weight: 600; border: none; cursor: pointer; font-size: 15px;">Sign Up & Unlock</button>
+            <button type="submit" id="auth-submit-btn" style="padding: 12px; border-radius: 12px; background: #007aff; color: #fff; font-weight: 600; border: none; cursor: pointer; font-size: 15px;">Sign In</button>
           </form>
 
           <div style="margin-top: 14px; font-size: 13px; color: #636366;">
-            <span id="auth-switch-text">Already have an account?</span>
-            <a href="#" id="auth-switch-btn" style="color: #007aff; font-weight: 600; text-decoration: none; margin-left: 4px;">Sign In</a>
+            <span id="auth-switch-text">New player?</span>
+            <a href="#" id="auth-switch-btn" style="color: #007aff; font-weight: 600; text-decoration: none; margin-left: 4px;">Create Account</a>
           </div>
           <button id="auth-close-x" style="display: none; margin-top: 12px; background: none; border: none; color: #8e8e93; font-size: 13px; cursor: pointer;">Close for now</button>
         </div>
@@ -181,7 +193,7 @@
 
       document.body.appendChild(modal);
 
-      let isSignUp = true;
+      let isSignUp = false;
       const authForm = document.getElementById('auth-form');
       const authTitle = document.getElementById('auth-title');
       const authSubmit = document.getElementById('auth-submit-btn');
@@ -190,6 +202,7 @@
       const authMsg = document.getElementById('auth-msg');
       const authClose = document.getElementById('auth-close-x');
       const authUsername = document.getElementById('auth-username');
+      const authIdentifier = document.getElementById('auth-identifier');
 
       authSwitch.onclick = (e) => {
         e.preventDefault();
@@ -202,6 +215,8 @@
           authSwitch.textContent = "Sign In";
           authUsername.style.display = 'block';
           authUsername.required = true;
+          authIdentifier.placeholder = "Email address";
+          authIdentifier.type = "email";
         } else {
           authTitle.textContent = "Welcome Back";
           authSubmit.textContent = "Sign In";
@@ -209,6 +224,8 @@
           authSwitch.textContent = "Create Account";
           authUsername.style.display = 'none';
           authUsername.required = false;
+          authIdentifier.placeholder = "Email or Username";
+          authIdentifier.type = "text";
         }
       };
 
@@ -219,18 +236,17 @@
         authMsg.style.color = '#007aff';
         authMsg.textContent = 'Processing...';
 
-        const email = document.getElementById('auth-email').value;
+        const identifier = authIdentifier.value.trim();
         const password = document.getElementById('auth-password').value;
-        const username = authUsername.value.trim().toLowerCase();
 
         if (isSignUp) {
+          const username = authUsername.value.trim().toLowerCase();
           if (username.length < 3) {
             authMsg.style.color = '#ff3b30';
             authMsg.textContent = 'Username must be at least 3 characters.';
             return;
           }
 
-          // Check if username is already taken
           const { data: existing } = await client
             .from('profiles')
             .select('id')
@@ -239,11 +255,11 @@
 
           if (existing) {
             authMsg.style.color = '#ff3b30';
-            authMsg.textContent = 'Username is already taken! Try another.';
+            authMsg.textContent = 'Username already taken! Try another.';
             return;
           }
 
-          const { data, error } = await client.auth.signUp({ email, password });
+          const { data, error } = await client.auth.signUp({ email: identifier, password });
           if (error) {
             authMsg.style.color = '#ff3b30';
             authMsg.textContent = error.message;
@@ -258,7 +274,27 @@
             setTimeout(() => location.reload(), 1000);
           }
         } else {
-          const { error } = await client.auth.signInWithPassword({ email, password });
+          let loginEmail = identifier;
+          
+          if (!identifier.includes('@')) {
+            const { data: prof, error: profErr } = await client
+              .from('profiles')
+              .select('id')
+              .eq('username', identifier.toLowerCase())
+              .maybeSingle();
+
+            if (profErr || !prof) {
+              authMsg.style.color = '#ff3b30';
+              authMsg.textContent = 'Username not found!';
+              return;
+            }
+
+            authMsg.style.color = '#ff3b30';
+            authMsg.textContent = 'Please enter your registered email to log in, or sign up!';
+            return;
+          }
+
+          const { error } = await client.auth.signInWithPassword({ email: loginEmail, password });
           if (error) {
             authMsg.style.color = '#ff3b30';
             authMsg.textContent = error.message;
@@ -291,7 +327,6 @@
             <button id="set-close-x" style="background:rgba(0,0,0,0.06); border:none; border-radius:50%; width:30px; height:30px; font-size:13px; line-height:1; cursor:pointer; color:#3a3a3c; display:flex; align-items:center; justify-content:center; padding:0;">✕</button>
           </div>
 
-          <!-- Live Stats Row -->
           <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:16px;">
             <div style="background:rgba(0,0,0,0.04); border-radius:12px; padding:10px 4px; text-align:center;">
               <b id="set-stat-plays" style="display:block; font-size:17px; color:#007aff;">0</b>
@@ -307,7 +342,6 @@
             </div>
           </div>
 
-          <!-- Gamer Username Section -->
           <div style="border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; margin-bottom:14px;">
             <span style="font-size:12px; font-weight:600; color:#8e8e93; text-transform:uppercase;">Gamer Username</span>
             <div style="display:flex; gap:8px; margin-top:6px;">
@@ -317,7 +351,6 @@
             <div id="set-uname-msg" style="font-size:11px; margin-top:4px; min-height:14px;"></div>
           </div>
 
-          <!-- Account Details -->
           <div style="border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; margin-bottom:14px;">
             <div style="font-size:13px; margin-bottom:4px;">
               <b>Email:</b> <span id="set-email-display" style="color:#636366;"></span>
@@ -327,7 +360,6 @@
             </div>
           </div>
 
-          <!-- Change Password -->
           <div style="border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; margin-bottom:14px;">
             <span style="font-size:12px; font-weight:600; color:#8e8e93; text-transform:uppercase;">Change Password</span>
             <input type="password" id="set-new-pwd" placeholder="New Password (min 6 chars)" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid #d1d1d6; font-size:13px; outline:none; background:#fff; color:#000; box-sizing:border-box; margin:8px 0;">
@@ -335,7 +367,6 @@
             <div id="set-pwd-msg" style="font-size:11px; margin-top:4px; min-height:14px;"></div>
           </div>
 
-          <!-- Actions -->
           <div style="border-top:1px solid rgba(0,0,0,0.08); padding-top:12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; gap:8px;">
               <button id="set-logout-cur" style="flex:1; padding:9px; border-radius:10px; background:rgba(0,0,0,0.06); border:none; font-weight:600; font-size:13px; cursor:pointer; color:#1c1c1e;">Log Out</button>
@@ -354,7 +385,6 @@
         if (e.target.id === 'arcade-settings-modal') this.closeSettingsModal();
       };
 
-      // Save Unique Username Event
       document.getElementById('set-update-uname-btn').onclick = async () => {
         const newUname = document.getElementById('set-new-username').value.trim().toLowerCase();
         const msg = document.getElementById('set-uname-msg');
@@ -396,7 +426,6 @@
         }
       };
 
-      // Password Update Event
       document.getElementById('set-update-pwd-btn').onclick = async () => {
         const newPwd = document.getElementById('set-new-pwd').value.trim();
         const msg = document.getElementById('set-pwd-msg');
@@ -420,7 +449,6 @@
         }
       };
 
-      // Session Management Events
       document.getElementById('set-logout-cur').onclick = () => this.signOut();
       document.getElementById('set-logout-all').onclick = async () => {
         if (client) {
@@ -430,7 +458,6 @@
         }
       };
 
-      // Clear Stats Trigger
       document.getElementById('set-delete-acc').onclick = () => {
         this.showConfirmModal("Clear Stats", "Are you sure you want to reset all your matches and win rate stats to zero?", () => {
           localStorage.removeItem('arcade_total_plays');
@@ -442,7 +469,6 @@
       };
     },
 
-    // ---------- THEMED CONFIRMATION MODAL ----------
     injectConfirmModal: function() {
       if (document.getElementById('arcade-confirm-modal')) return;
 
@@ -529,7 +555,7 @@
       if (isMandatory) {
         title.textContent = "Free Passes Ended!";
         closeBtn.style.display = 'none';
-        authDesc.textContent = "You've completed your 5 free guest games! Create an account to unlock unlimited play.";
+        authDesc.textContent = "You've completed your 10 free guest games! Create an account to unlock unlimited play.";
       } else {
         title.textContent = "Welcome to Mini Arcade";
         closeBtn.style.display = 'inline-block';

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>16 Slips · Mini Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- Supabase SDK, Auth & Online Engine -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
+<script src="js/online.js"></script>
+<style>
+  .slip-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+  .slip-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+  }
+  .slip-field label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink2, #8e8e93);
+    text-transform: uppercase;
+  }
+  .slip-input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.06);
+    color: var(--ink, #1c1c1e);
+    font-size: 13px;
+    font-weight: 600;
+    box-sizing: border-box;
+    outline: none;
+  }
+
+  /* Room Box */
+  .room-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 14px 0;
+    text-align: center;
+  }
+  .room-code-tag {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: #30d158;
+    background: rgba(48, 209, 88, 0.12);
+    padding: 8px 16px;
+    border-radius: 12px;
+    display: inline-block;
+    margin: 10px 0;
+  }
+  .room-input {
+    width: 140px;
+    padding: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+    outline: none;
+  }
+
+  /* Table Arena */
+  .table-arena {
+    width: 100%;
+    max-width: 440px;
+    aspect-ratio: 1 / 1.15;
+    margin: 0 auto 14px;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08) 0%, rgba(20,20,25,0.95) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    border-radius: 24px;
+    position: relative;
+    box-sizing: border-box;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .player-spot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .player-badge {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .player-badge.active-turn {
+    background: #007aff;
+    box-shadow: 0 0 12px rgba(0,122,255,0.6);
+  }
+  .chit-counter {
+    display: flex;
+    gap: 4px;
+  }
+  .mini-slip {
+    width: 14px;
+    height: 18px;
+    background: #e5e5ea;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+
+  .middle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .center-ring {
+    width: 74px;
+    height: 74px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #fff;
+    animation: rotatePass 6s linear infinite;
+  }
+  @keyframes rotatePass {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .my-chits-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 6px;
+  }
+  .chit-card {
+    flex: 1;
+    max-width: 74px;
+    aspect-ratio: 1 / 1.35;
+    background: #ffffff;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+    transition: transform 0.15s ease, border 0.15s;
+    user-select: none;
+    border: 2px solid transparent;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+  .chit-card:hover {
+    transform: translateY(-6px);
+  }
+  .chit-card.selected {
+    transform: translateY(-10px);
+    border-color: #007aff;
+    box-shadow: 0 10px 22px rgba(0,122,255,0.4);
+  }
+  .chit-card .ic {
+    font-size: 24px;
+    margin-bottom: 3px;
+  }
+  .chit-card .lbl {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1c1c1e;
+    text-align: center;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Mini Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 10 guest passes left</span>
+      <button id="auth-btn">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead" style="text-align:center;">
+    <h1 style="display:flex; align-items:center; justify-content:center; gap:8px; margin:0;">
+      <span>📜</span> 16 Slips (Pass &amp; Match) <span>📜</span>
+    </h1>
+    <p style="font-size:13px; color:var(--ink2, #636366); margin:4px 0 0;">Pass 1 slip each turn. First player to collect 4 matching slips wins!</p>
+  </div>
+
+  <!-- Setup Panel -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on" id="mode-bot">vs 3 Bots</button>
+      <button id="mode-online">Online (room code)</button>
+    </div>
+
+    <!-- Online Setup -->
+    <div id="online-opts" style="display:none">
+      <div class="room-box">
+        <p style="margin:0 0 10px; font-size:14px; color:var(--ink2);">Play 16 Slips with a friend across screens:</p>
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:14px;">
+          <button class="cta" id="btn-create-room">Create Room</button>
+        </div>
+
+        <div style="font-size:12px; color:var(--ink2); margin: 12px 0;">— OR ENTER A ROOM CODE —</div>
+
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
+          <input type="text" id="join-code-input" class="room-input" placeholder="CODE" maxlength="4">
+          <button class="cta" id="btn-join-room" style="padding:10px 18px;">Join</button>
+        </div>
+
+        <div id="online-wait-msg" style="display:none; margin-top:14px;">
+          <div style="font-size:13px; color:var(--ink2);">Share code with friend:</div>
+          <div class="room-code-tag" id="disp-room-code">----</div>
+          <div style="font-size:13px; color:#ff9f0a;">Waiting for friend to join...</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="local-opts">
+      <div class="slip-grid">
+        <div class="slip-field">
+          <label>Slip 1 Name</label>
+          <input type="text" id="slip-name-1" class="slip-input" value="Slip 1" maxlength="12">
+        </div>
+        <div class="slip-field">
+          <label>Slip 2 Name</label>
+          <input type="text" id="slip-name-2" class="slip-input" value="Slip 2" maxlength="12">
+        </div>
+        <div class="slip-field">
+          <label>Slip 3 Name</label>
+          <input type="text" id="slip-name-3" class="slip-input" value="Slip 3" maxlength="12">
+        </div>
+        <div class="slip-field">
+          <label>Slip 4 Name</label>
+          <input type="text" id="slip-name-4" class="slip-input" value="Slip 4" maxlength="12">
+        </div>
+      </div>
+
+      <div class="row" id="level-row"><b>Bot level</b>
+        <button data-level="easy">Easy</button>
+        <button data-level="medium" class="on">Medium</button>
+        <button data-level="hard">Hard</button>
+      </div>
+      <div class="note" id="level-note">Medium: Bots play like regular players, discarding their odd slips.</div>
+
+      <div class="actions"><button class="cta" id="start">Start game</button></div>
+    </div>
+  </div>
+
+  <!-- Game Stage Container -->
+  <div class="stage glass" id="game" style="display:none">
+    <div id="status">Select a slip below to pass clockwise →</div>
+
+    <div class="table-arena">
+      <!-- Top Bot/Guest -->
+      <div class="player-spot">
+        <div class="player-badge" id="badge-bot1">Alex (Bot)</div>
+        <div class="chit-counter" id="chits-bot1">
+          <div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div>
+        </div>
+      </div>
+
+      <!-- Left & Right -->
+      <div class="middle-row">
+        <div class="player-spot">
+          <div class="player-badge" id="badge-bot2">Sam (Bot)</div>
+          <div class="chit-counter" id="chits-bot2">
+            <div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div>
+          </div>
+        </div>
+
+        <div class="center-ring">↻</div>
+
+        <div class="player-spot">
+          <div class="player-badge" id="badge-bot3">Leo (Bot)</div>
+          <div class="chit-counter" id="chits-bot3">
+            <div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div><div class="mini-slip"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Human/Host -->
+      <div class="player-spot" style="width:100%;">
+        <div class="player-badge active-turn" id="badge-p1">You</div>
+        <div class="my-chits-row" id="hand-cards"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="cta" id="btn-pass" style="width:100%; padding:11px;" disabled>Pass Selected Slip →</button>
+    </div>
+
+    <div class="actions" style="margin-top:10px;">
+      <button id="reset">Restart Game</button>
+      <button id="change">Change settings</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/sixteenchits.js"></script>
+</body>
+</html>

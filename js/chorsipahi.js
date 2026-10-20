@@ -11,7 +11,7 @@ const ROLES = {
 };
 
 const DEFAULT_SEATS = ['human', 'bot', 'bot', 'bot'];
-const PLAYER_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+const PLAYER_NAMES = ['You', 'Alex (Bot)', 'Sam (Bot)', 'Leo (Bot)'];
 
 // ---------- ONLINE STATE ----------
 let isOnline = false;
@@ -30,28 +30,6 @@ let animatingToss = false;
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-// ---------- SETUP LOGIC ----------
-function renderSetup() {
-  const seatsEl = $('seats');
-  seatsEl.innerHTML = '';
-  for (let i = 0; i < 4; i++) {
-    const row = document.createElement('div');
-    row.className = 'seat';
-    row.innerHTML = '<span class="dot" style="background:#8d6e63"></span><span class="name">' + PLAYER_NAMES[i] + '</span>';
-    ['human', 'bot'].forEach(t => {
-      const b = document.createElement('button');
-      b.textContent = t === 'human' ? 'Human' : 'Bot 🤖';
-      if (seatTypes[i] === t) b.className = 'on';
-      b.onclick = () => {
-        seatTypes[i] = t;
-        renderSetup();
-      };
-      row.appendChild(b);
-    });
-    seatsEl.appendChild(row);
-  }
-}
 
 document.querySelectorAll('[data-rounds]').forEach(b => b.addEventListener('click', () => {
   totalRounds = +b.dataset.rounds;
@@ -158,9 +136,9 @@ function promptNextPicker() {
   }
 
   if (!isBot) {
-    $('status').textContent = '👉 ' + pName + ': Tap any of the 4 chits on the table!';
+    $('status').textContent = '👉 Your turn! Tap any of the 4 chits on the table.';
   } else {
-    $('status').textContent = pName + ' 🤖 is choosing a chit...';
+    $('status').textContent = pName + ' is choosing a chit...';
     setTimeout(() => {
       const available = [];
       chitPickedBy.forEach((takenBy, idx) => {
@@ -170,7 +148,7 @@ function promptNextPicker() {
         const chosen = available[Math.floor(Math.random() * available.length)];
         executeChitPick(chosen, activePicker);
       }
-    }, 800);
+    }, 750);
   }
 }
 
@@ -264,7 +242,7 @@ function promptMinisterGuess(ministerIdx, soldierIdx, thiefIdx) {
   }
 
   if (isMinisterBot) {
-    $('status').textContent = 'Minister ' + PLAYER_NAMES[ministerIdx] + ' 🤖 is guessing who the Thief is...';
+    $('status').textContent = 'Minister ' + PLAYER_NAMES[ministerIdx] + ' is guessing who the Thief is...';
     setTimeout(() => {
       const guessed = suspects[Math.floor(Math.random() * suspects.length)];
       resolveRoundResult(ministerIdx, guessed, thiefIdx, soldierIdx);
@@ -357,7 +335,7 @@ function showAllRolesOnTable() {
 function renderScoreboard() {
   $('score-cards').innerHTML = PLAYER_NAMES.map((nm, i) =>
     '<div class="pcard"><span class="dot" style="background:#8d6e63"></span>' +
-    nm + (!isOnline && seatTypes[i] === 'bot' ? ' 🤖' : '') + ': <b>' + scores[i] + ' pts</b></div>'
+    nm + ': <b>' + scores[i] + ' pts</b></div>'
   ).join('');
 }
 
@@ -367,7 +345,7 @@ function finishGame() {
     if (s > highest) { highest = s; winner = i; }
   });
   $('status').textContent = '🏆 Game Over! ' + PLAYER_NAMES[winner] + ' wins with ' + highest + ' points!';
-  if (window.ArcadeAuth) ArcadeAuth.recordGamePlay();
+  if (window.ArcadeAuth) ArcadeAuth.recordGamePlay(winner === 0);
 
   if (!isOnline || myRole === 0) {
     $('next-btn').style.display = 'inline-block';
@@ -446,6 +424,7 @@ function setupOnline() {
 // ---------- BUTTON HANDLERS ----------
 $('start').onclick = () => {
   if (window.ArcadeAuth && !ArcadeAuth.canPlay()) return;
+  seatTypes = ['human', 'bot', 'bot', 'bot'];
   scores = [0, 0, 0, 0];
   currentRound = 1;
   $('setup').style.display = 'none';
@@ -467,7 +446,6 @@ $('change-btn').onclick = () => {
   $('btn-create-room').textContent = "Create Room";
   $('btn-join-room').disabled = false;
   $('btn-join-room').textContent = "Join";
-  renderSetup();
 };
 
 $('mode-local').onclick = () => {
@@ -486,5 +464,4 @@ $('mode-online').onclick = () => {
   $('online-opts').style.display = '';
 };
 
-renderSetup();
 setupOnline();

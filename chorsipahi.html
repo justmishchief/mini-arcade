@@ -150,24 +150,28 @@
   <div class="topbar">
     <a href="index.html" class="logo">Mini Arcade</a>
     <div class="topright">
-      <span class="pill" id="online-count">● 5 guest passes left</span>
+      <span class="pill" id="online-count">● 10 guest passes left</span>
       <button id="auth-btn">Sign in</button>
     </div>
   </div>
 
-  <div class="gamehead"><h1>📜 King &amp; Thief</h1></div>
+  <div class="gamehead" style="text-align:center;">
+    <h1 style="display:flex; align-items:center; justify-content:center; gap:8px; margin:0;">
+      <span>📜</span> King &amp; Thief <span>📜</span>
+    </h1>
+  </div>
 
   <!-- Setup screen -->
   <div class="panel glass" id="setup">
     <div class="row"><b>Mode</b>
-      <button class="on" id="mode-local">Play here</button>
+      <button class="on" id="mode-local">vs Bots</button>
       <button id="mode-online">Online (room code)</button>
     </div>
 
     <!-- Online Setup -->
     <div id="online-opts" style="display:none">
       <div class="room-box">
-        <p style="margin:0 0 10px; font-size:14px; color:var(--ink2);">Play King &amp; Thief with friends in real-time:</p>
+        <p style="margin:0 0 10px; font-size:14px; color:var(--ink2);">Play King &amp; Thief with friends in real-time across screens:</p>
         <div style="display:flex; justify-content:center; gap:10px; margin-bottom:14px;">
           <button class="cta" id="btn-create-room">Create Room</button>
         </div>
@@ -193,8 +197,7 @@
         <button data-rounds="5" class="on">5</button>
         <button data-rounds="10">10</button>
       </div>
-      <div class="seats" id="seats"></div>
-      <div class="note">4 players: King (1000 pts), Minister (800 pts), Soldier (500 pts), Thief (0 pts). Chits are tossed onto the table. Pick any chit!</div>
+      <div class="note">You vs 3 Bots: King (1000 pts), Minister (800 pts), Soldier (500 pts), Thief (0 pts). Chits are tossed onto the table. Pick your secret chit!</div>
       <div class="actions"><button class="cta" id="start">Toss chits</button></div>
     </div>
   </div>

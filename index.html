@@ -150,7 +150,7 @@
   <div class="topbar">
     <a href="index.html" class="logo">Mini Arcade</a>
     <div class="topright">
-      <span class="pill" id="online-count">● 5 guest passes left</span>
+      <span class="pill" id="online-count">● 10 guest passes left</span>
       <button id="auth-btn">Sign in</button>
     </div>
   </div>
@@ -173,7 +173,7 @@
 
     <!-- All games grid -->
     <section>
-      <div class="sectionhead"><h2>Top games</h2><span id="count">8 games</span></div>
+      <div class="sectionhead"><h2>Top games</h2><span id="count">10 games</span></div>
       <div class="glist" id="glist">
 
         <a class="gcard glass" href="penfight.html" style="--g1:#007aff;--g2:#5856d6">
@@ -222,6 +222,26 @@
           <div class="gthumb">🏏</div>
           <div class="gbody"><h3>Hand Cricket</h3><small>Show a number, don't get matched.</small><span class="playbtn">Play</span>
             <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot</span></div></div>
+        </a>
+
+        <a class="gcard glass" href="airhockey.html" style="--g1:#00c6ff;--g2:#0072ff">
+          <div class="gthumb">🏒</div>
+          <div class="gbody">
+            <h3>Air Hockey</h3>
+            <small>Tactile 2D neon physics arena.</small>
+            <span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">2 players</span><span class="mini">Bot / 2P</span></div>
+          </div>
+        </a>
+
+        <a class="gcard glass" href="sixteenchits.html" style="--g1:#d48806;--g2:#eb2f96">
+          <div class="gthumb">📜</div>
+          <div class="gbody">
+            <h3>16 Slips</h3>
+            <small>Pass &amp; match 4 secret slips.</small>
+            <span class="playbtn">Play</span>
+            <div class="chiprow"><span class="mini">4 players</span><span class="mini">1v3 Bots</span></div>
+          </div>
         </a>
 
       </div>
@@ -285,5 +305,94 @@
   <footer>MADE BY JUSTMISHCHIEF</footer>
 </div>
 <script src="js/home.js"></script>
+<script>
+  // =====================================================================
+  // 1. BROWSER BACK BUTTON FIX: Always Restore "All games"
+  // =====================================================================
+  function restoreAllGamesView() {
+    const vg = document.getElementById('view-games');
+    const vr = document.getElementById('view-rules');
+    const va = document.getElementById('view-about');
+    const tabs = document.querySelectorAll('#tabs button');
+
+    if (vg) vg.style.display = 'block';
+    if (vr) vr.style.display = 'none';
+    if (va) va.style.display = 'none';
+
+    tabs.forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.tab === 'games');
+    });
+  }
+
+  window.addEventListener('pageshow', restoreAllGamesView);
+  window.addEventListener('popstate', restoreAllGamesView);
+
+  // =====================================================================
+  // 2. INJECT AIR HOCKEY & 16 SLIPS RULES POPUP
+  // =====================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('rules-container');
+    const modal = document.getElementById('rule-modal');
+    const rmTitle = document.getElementById('rm-title');
+    const rmDesc = document.getElementById('rm-desc');
+    const rmPoints = document.getElementById('rm-points');
+    const rmClose = document.getElementById('rm-close');
+
+    if (rmClose && modal) {
+      rmClose.onclick = () => { modal.style.display = 'none'; };
+      modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    }
+
+    const newRules = [
+      {
+        icon: '🏒',
+        title: 'Air Hockey',
+        desc: 'Tactile 2D neon air hockey table with rapid puck rebounds.',
+        points: [
+          'Drag your paddle mallet across your defensive half.',
+          'Rebound the neon puck into the opponent goal post to score.',
+          'First player to reach 5 points wins the match (+100 Global Leaderboard pts).',
+          'Play solo against progressive AI bots, on 1 device, or via online room code.'
+        ]
+      },
+      {
+        icon: '📜',
+        title: '16 Slips',
+        desc: 'Nostalgic 4-player pass and match secret card collecting game.',
+        points: [
+          'A deck of 16 slips (4 copies of 4 custom items) is dealt to 4 players.',
+          'Each turn, choose 1 unwanted slip from your hand and pass it clockwise.',
+          'Collect 4 identical matching slips before anyone else to win instantly!',
+          'Personalize all 4 slip titles from the pre-game match menu.'
+        ]
+      }
+    ];
+
+    function appendNewRuleBoxes() {
+      if (!container) return;
+      newRules.forEach(rule => {
+        if ([...container.children].some(box => box.textContent.includes(rule.title))) return;
+
+        const box = document.createElement('div');
+        box.className = 'rule-box';
+        box.innerHTML = `
+          <div class="rb-icon">${rule.icon}</div>
+          <div class="rb-title">${rule.title}</div>
+        `;
+        box.onclick = () => {
+          if (!modal) return;
+          rmTitle.innerHTML = `<span>${rule.icon}</span> ${rule.title}`;
+          rmDesc.textContent = rule.desc;
+          rmPoints.innerHTML = rule.points.map(pt => `<li>${pt}</li>`).join('');
+          modal.style.display = 'flex';
+        };
+        container.appendChild(box);
+      });
+    }
+
+    appendNewRuleBoxes();
+    setTimeout(appendNewRuleBoxes, 400);
+  });
+</script>
 </body>
 </html>
