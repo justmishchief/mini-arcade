@@ -96,7 +96,7 @@
     line-height: 1.6;
   }
 
-  /* About Box */
+  /* About Box & Platform Feature List */
   .about-box {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -109,6 +109,37 @@
   }
   .about-box b {
     color: var(--ink, #1c1c1e);
+  }
+  .about-features {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .feature-item {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .feature-item .f-ic {
+    font-size: 24px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+  .feature-item h4 {
+    margin: 0 0 4px 0;
+    font-size: 15px;
+    color: var(--ink, #1c1c1e);
+  }
+  .feature-item p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ink2, #636366);
+    line-height: 1.5;
   }
 </style>
 </head>
@@ -124,11 +155,13 @@
     </div>
   </div>
 
-  <!-- Pill navigation: All games, Rules, About -->
+  <!-- Pill navigation: All games, Rules, Leaderboard, Forum, About -->
   <div class="nav">
     <div class="seg" id="tabs">
       <button data-tab="games" class="on">All games</button>
       <button data-tab="rules">Rules</button>
+      <a href="leaderboard.html" style="text-decoration:none;"><button type="button">Leaderboard</button></a>
+      <a href="forum.html" style="text-decoration:none;"><button type="button">Forum</button></a>
       <button data-tab="about">About</button>
     </div>
   </div>
@@ -193,23 +226,6 @@
 
       </div>
     </section>
-
-    <!-- Platform Features -->
-    <section>
-      <div class="sectionhead"><h2>Platform Features</h2></div>
-      <div class="soon">
-        <div class="item glass">
-          <span class="ic">🔑</span>
-          <div>
-            <b>Online rooms</b>
-            <small>Create 4-letter room codes &amp; play with friends instantly on any device.</small>
-            <span class="tag" style="background:rgba(52,199,89,0.18); color:#30d158; border:1px solid rgba(52,199,89,0.3);">● Live now</span>
-          </div>
-        </div>
-        <div class="item glass"><span class="ic">🏆</span><div><b>Leaderboard</b><small>Sign in and see who is on top.</small><span class="tag">Coming soon</span></div></div>
-        <div class="item glass"><span class="ic">💬</span><div><b>Forum</b><small>Talk games, share tips, suggest new ones.</small><span class="tag">Coming soon</span></div></div>
-      </div>
-    </section>
   </div>
 
   <!-- VIEW 2: RULES (Small boxes with names) -->
@@ -218,14 +234,41 @@
     <div class="rules-grid" id="rules-container"></div>
   </div>
 
-  <!-- VIEW 3: ABOUT -->
+  <!-- VIEW 3: ABOUT & PLATFORM OVERVIEW -->
   <div id="view-about" style="display:none">
     <div class="sectionhead"><h2>About Mini Arcade</h2></div>
     <div class="about-box glass">
-      <p style="margin-top:0;"><b>Mini Arcade</b> is a nostalgic collection of classic desktop, sports, and childhood tabletop games crafted directly for your browser with real-time multiplayer room codes and tactile physics.</p>
-      <p>Whether you want to play solo against tactical bots, share a device with a friend, or connect instantly with someone across rooms via a 4-letter code, everything runs seamlessly with zero downloads.</p>
-      <p>This arcade is actively evolving with more games, leaderboards, and features on the way.</p>
-      <p style="margin-bottom:0; font-weight:600; color:#007aff;">Built and designed with care by justmishchief.</p>
+      <p style="margin-top:0;"><b>Mini Arcade</b> is a nostalgic collection of classic desktop, sports, and childhood tabletop games crafted directly for modern browsers with real-time multiplayer room codes and tactile physics.</p>
+      
+      <p>Whether you want to play solo against tactical bots, share a device with a friend, or connect instantly with someone across devices via a 4-letter code, everything runs seamlessly with zero downloads.</p>
+
+      <div class="about-features">
+        <div class="feature-item">
+          <span class="f-ic">🔑</span>
+          <div>
+            <h4>Online Rooms</h4>
+            <p>Generate clean 4-letter room codes to play live peer-to-peer multiplayer matches with friends across phones, tablets, or computers.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <span class="f-ic">🏆</span>
+          <div>
+            <h4>Global Leaderboard</h4>
+            <p>Compete, win matches, and climb global score ranks with real-time stats syncing directly to your personalized arcade profile.</p>
+          </div>
+        </div>
+
+        <div class="feature-item">
+          <span class="f-ic">💬</span>
+          <div>
+            <h4>Community Forum</h4>
+            <p>An open space to discuss arcade strategies, drop gameplay feedback, and request new classic games to be built.</p>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:20px; margin-bottom:0; font-weight:600; color:#007aff;">Built and designed with care by justmishchief.</p>
     </div>
   </div>
 

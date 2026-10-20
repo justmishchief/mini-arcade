@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard · Mini Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
+<style>
+  .lb-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .lb-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.15s ease;
+  }
+  .lb-card:hover {
+    transform: translateY(-2px);
+  }
+  .lb-rank {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    background: rgba(0,0,0,0.06);
+    color: var(--ink, #1c1c1e);
+  }
+  .lb-rank.gold { background: #ffd700; color: #000; }
+  .lb-rank.silver { background: #e0e0e0; color: #000; }
+  .lb-rank.bronze { background: #cd7f32; color: #fff; }
+  .lb-player {
+    flex: 1;
+    margin-left: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .lb-player b {
+    font-size: 15px;
+    color: var(--ink, #1c1c1e);
+  }
+  .lb-player small {
+    font-size: 12px;
+    color: var(--ink2, #8e8e93);
+  }
+  .lb-score {
+    text-align: right;
+  }
+  .lb-score b {
+    font-size: 16px;
+    color: #007aff;
+  }
+  .lb-score small {
+    display: block;
+    font-size: 11px;
+    color: var(--ink2, #8e8e93);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Mini Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 5 guest passes left</span>
+      <button id="auth-btn">Sign in</button>
+    </div>
+  </div>
+
+  <div class="lb-container">
+    <div class="gamehead" style="margin-bottom: 20px; text-align: center;">
+      <h1 style="display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0;">
+        <span>🏆</span> Global Leaderboard <span>🏆</span>
+      </h1>
+      <p style="font-size:14px; color:var(--ink2, #636366); margin: 6px 0 0;">Top arcade champions ranked by total match score.</p>
+    </div>
+
+    <div id="lb-list">
+      <div style="text-align:center; padding:30px; color:var(--ink2);">Loading leaderboard...</div>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+
+<script>
+async function loadLeaderboard() {
+  const container = document.getElementById('lb-list');
+  const sb = window.supabaseClient;
+  if (!sb) {
+    setTimeout(loadLeaderboard, 300);
+    return;
+  }
+
+  const { data, error } = await sb
+    .from('profiles')
+    .select('username, wins, matches, score')
+    .order('score', { ascending: false })
+    .limit(50);
+
+  if (error || !data || !data.length) {
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--ink2); font-size:14px;">No ranked players yet. Be the first to win!</div>`;
+    return;
+  }
+
+  container.innerHTML = data.map((player, idx) => {
+    let rankBadge = idx + 1;
+    let rankClass = '';
+    if (idx === 0) rankClass = 'gold';
+    else if (idx === 1) rankClass = 'silver';
+    else if (idx === 2) rankClass = 'bronze';
+
+    return `
+      <div class="lb-card glass">
+        <div class="lb-rank ${rankClass}">${rankBadge}</div>
+        <div class="lb-player">
+          <b>${player.username || 'Anonymous'}</b>
+          <small>${player.wins} Wins · ${player.matches} Matches</small>
+        </div>
+        <div class="lb-score">
+          <b>${player.score} pts</b>
+          <small>Score</small>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+document.addEventListener('DOMContentLoaded', loadLeaderboard);
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forum · Mini Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- Supabase SDK & Auth Engine -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
+<style>
+  .forum-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .post-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .post-input {
+    width: 100%;
+    min-height: 80px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 12px;
+    color: var(--ink, #1c1c1e);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    resize: none;
+    box-sizing: border-box;
+  }
+  .post-input:focus {
+    border-color: rgba(0, 122, 255, 0.6);
+  }
+  .post-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .feed {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 14px 18px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: var(--ink2, #8e8e93);
+  }
+  .msg-user {
+    font-weight: 600;
+    color: var(--ink, #1c1c1e);
+  }
+  .msg-body {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink, #1c1c1e);
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Mini Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● 5 guest passes left</span>
+      <button id="auth-btn">Sign in</button>
+    </div>
+  </div>
+
+  <div class="forum-container">
+    <div class="gamehead" style="margin-bottom: 18px; text-align: center;">
+      <h1 style="display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0;">
+        <span>💬</span> Community Forum <span>💬</span>
+      </h1>
+      <p style="font-size:14px; color:var(--ink2, #636366); margin: 6px 0 0;">Share tips, report bugs, or suggest new games!</p>
+    </div>
+
+    <!-- Message Creator -->
+    <div class="post-box glass">
+      <textarea id="forum-input" class="post-input" placeholder="Drop a thought, tip, or game idea..." maxlength="300"></textarea>
+      <div class="post-actions">
+        <small id="char-count" style="color:var(--ink2); font-size:12px;">300 chars left</small>
+        <button class="cta" id="btn-post" style="padding: 8px 18px; font-size: 14px;">Post</button>
+      </div>
+    </div>
+
+    <!-- Message Feed -->
+    <div class="feed" id="forum-feed">
+      <div style="text-align:center; padding: 20px; color:var(--ink2); font-size:14px;">Loading messages...</div>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+
+<script src="js/forum.js"></script>
+</body>
+</html>
