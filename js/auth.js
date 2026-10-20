@@ -104,13 +104,6 @@
       const path = window.location.pathname;
       const isHome = path.endsWith('index.html') || path === '/' || path === '';
       if (!isHome) {
-        // Enforce balanced single-row flex layout on the topbar
-        topbar.style.display = 'flex';
-        topbar.style.alignItems = 'center';
-        topbar.style.justifyContent = 'space-between';
-        topbar.style.flexWrap = 'nowrap';
-        topbar.style.gap = '8px';
-
         const arrow = document.createElement('a');
         arrow.id = 'mobile-back-arrow';
         arrow.href = 'index.html';
@@ -125,9 +118,6 @@
         `;
 
         if (logo) {
-          // Group the back arrow cleanly adjacent to the logo
-          logo.style.display = 'inline-flex';
-          logo.style.alignItems = 'center';
           logo.parentElement.insertBefore(arrow, logo);
         } else {
           topbar.prepend(arrow);
