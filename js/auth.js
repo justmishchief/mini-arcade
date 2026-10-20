@@ -95,7 +95,7 @@
       });
     },
 
-    // Clean, aligned top-left Back Arrow for game pages
+    // Clean, aligned top-left Back Arrow with SVG
     injectMobileBackBtn: function() {
       const topbar = document.querySelector('.topbar');
       const logo = document.querySelector('.topbar .logo');
@@ -107,14 +107,12 @@
         const arrow = document.createElement('a');
         arrow.id = 'mobile-back-arrow';
         arrow.href = 'index.html';
-        arrow.innerHTML = '←';
         arrow.setAttribute('aria-label', 'Back to Arcade Home');
-        arrow.style.cssText = `
-          display: inline-flex; align-items: center; justify-content: center;
-          width: 32px; height: 32px; border-radius: 50%;
-          background: rgba(0,0,0,0.06); color: var(--ink, #1c1c1e);
-          text-decoration: none; font-size: 18px; font-weight: 700;
-          margin-right: 6px; flex-shrink: 0; line-height: 1;
+        arrow.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
         `;
 
         if (logo) {
@@ -678,7 +676,6 @@
       const devListEl = document.getElementById('set-devices-list');
       if (devListEl && client && this.currentUser) {
         try {
-          // Identify devices active in the last 10 minutes
           const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
           const { data: devices } = await client
             .from('user_devices')

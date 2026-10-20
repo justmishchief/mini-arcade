@@ -523,6 +523,16 @@ a, button, input, select, textarea {
   }
 }
 
+/* Hide horizontal scrollbar on navigation tabs */
+.nav .seg {
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.nav .seg::-webkit-scrollbar {
+  display: none !important;
+}
+
 /* Topbar & Mobile Back Button Single Row Layout */
 .topbar {
   display: flex !important;
@@ -559,9 +569,14 @@ a, button, input, select, textarea {
   background: rgba(0, 0, 0, 0.06) !important;
   color: var(--ink, #1c1c1e) !important;
   text-decoration: none !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
   flex-shrink: 0 !important;
   margin-right: 4px !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+}
+
+#mobile-back-arrow svg {
+  width: 16px !important;
+  height: 16px !important;
+  display: block !important;
 }
