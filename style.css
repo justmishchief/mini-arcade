@@ -516,21 +516,34 @@ a, button, input, select, textarea {
   margin-top: 6px;
 }
 
-/* Mobile Responsive Fit for Navigation Capsule Bar */
-@media (max-width: 480px) {
-  .nav .seg {
-    display: flex;
+/* Mobile Responsive Fit for Navigation Capsule Bar (No Slide / Full Auto-Fit) */
+@media (max-width: 600px) {
+  .nav {
+    padding: 0 4px !important;
+    width: 100% !important;
   }
-}
-
-/* Hide horizontal scrollbar on navigation tabs */
-.nav .seg {
-  overflow-x: auto !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-.nav .seg::-webkit-scrollbar {
-  display: none !important;
+  .nav .seg {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
+    padding: 3px !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .nav .seg::-webkit-scrollbar {
+    display: none !important;
+  }
+  .nav .seg button {
+    flex: 1 !important;
+    padding: 6px 3px !important;
+    font-size: 11.5px !important;
+    letter-spacing: -0.2px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    min-width: 0 !important;
+  }
 }
 
 /* Topbar & Mobile Back Button Single Row Layout */
@@ -569,14 +582,9 @@ a, button, input, select, textarea {
   background: rgba(0, 0, 0, 0.06) !important;
   color: var(--ink, #1c1c1e) !important;
   text-decoration: none !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
   flex-shrink: 0 !important;
   margin-right: 4px !important;
-  padding: 0 !important;
-  line-height: 0 !important;
-}
-
-#mobile-back-arrow svg {
-  width: 16px !important;
-  height: 16px !important;
-  display: block !important;
 }
