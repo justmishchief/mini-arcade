@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas (Word Battle) · Mini Arcade</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- Supabase SDK, Auth & Online Engine -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/auth.js"></script>
+<script src="js/online.js"></script>
+<style>
+  .atlas-card {
+    max-width: 500px;
+    margin: 14px auto;
+    padding: 20px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 16px 36px rgba(0,0,0,0.1);
+  }
+  .hud-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.04);
+    padding: 12px 16px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .hearts {
+    color: #ff3b30;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .timer-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .timer-bar {
+    width: 100%;
+    height: 100%;
+    background: #34c759;
+    transition: width 1s linear, background-color 0.3s ease;
+  }
+  .target-letter-box {
+    text-align: center;
+    padding: 16px;
+    background: radial-gradient(circle at center, rgba(255, 159, 10, 0.15) 0%, rgba(255, 159, 10, 0.02) 100%);
+    border: 2px dashed rgba(255, 159, 10, 0.5);
+    border-radius: 16px;
+    margin-bottom: 16px;
+  }
+  .target-letter {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--accent2, #ff9f0a);
+    display: block;
+    line-height: 1;
+    margin-top: 4px;
+  }
+  .word-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .word-input {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-family: inherit;
+    border-radius: 12px;
+    border: 1.5px solid rgba(0,0,0,0.15);
+    background: #ffffff;
+    outline: none;
+    text-transform: capitalize;
+  }
+  .word-input:focus {
+    border-color: var(--accent2, #ff9f0a);
+  }
+  .word-submit {
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    background: #1c1c1e;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .feedback-msg {
+    font-size: 13px;
+    min-height: 18px;
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .history-box {
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+  .word-chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-weight: 600;
+  }
+  .word-chip b {
+    color: var(--accent2, #ff9f0a);
+  }
+  .room-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    margin: 14px 0;
+    text-align: center;
+  }
+  .room-code-tag {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: #30d158;
+    background: rgba(48, 209, 88, 0.12);
+    padding: 8px 16px;
+    border-radius: 12px;
+    display: inline-block;
+    margin: 10px 0;
+  }
+  .room-input {
+    width: 140px;
+    padding: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.2);
+    color: #fff;
+    outline: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="index.html" class="logo">Mini Arcade</a>
+    <div class="topright">
+      <span class="pill" id="online-count">● Unlimited Access</span>
+      <button id="auth-btn">Sign in</button>
+    </div>
+  </div>
+
+  <div class="gamehead"><h1>🌍 Atlas (Word Battle)</h1></div>
+
+  <!-- Setup screen -->
+  <div class="panel glass" id="setup">
+    <div class="row"><b>Mode</b>
+      <button class="on" id="mode-bot">vs Bot 🤖</button>
+      <button id="mode-local">Same screen</button>
+      <button id="mode-online">Online (room code)</button>
+    </div>
+
+    <!-- Online Setup -->
+    <div id="online-opts" style="display:none">
+      <div class="room-box">
+        <p style="margin:0 0 10px; font-size:14px; color:var(--ink2);">Play 1v1 Atlas Word Battle with a friend in real-time:</p>
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:14px;">
+          <button class="cta" id="btn-create-room">Create Room</button>
+        </div>
+
+        <div style="font-size:12px; color:var(--ink2); margin: 12px 0;">— OR ENTER A ROOM CODE —</div>
+
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
+          <input type="text" id="join-code-input" class="room-input" placeholder="CODE" maxlength="4">
+          <button class="cta" id="btn-join-room" style="padding:10px 18px;">Join</button>
+        </div>
+
+        <div id="online-wait-msg" style="display:none; margin-top:14px;">
+          <div style="font-size:13px; color:var(--ink2);">Share code with friend:</div>
+          <div class="room-code-tag" id="disp-room-code">----</div>
+          <div style="font-size:13px; color:#ff9f0a;">Waiting for friend to join...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Setup -->
+    <div id="local-opts">
+      <div class="row" id="timer-row"><b>Turn Timer</b>
+        <button class="on" data-time="15">15s</button>
+        <button data-time="10">10s (Fast)</button>
+        <button data-time="20">20s (Chill)</button>
+      </div>
+      <div class="row" id="bot-diff-row"><b>Bot Level</b>
+        <button class="on" data-diff="easy">Easy</button>
+        <button data-diff="med">Medium</button>
+        <button data-diff="hard">Hard</button>
+      </div>
+      <div class="note">Enter a valid country or city starting with the previous word's last letter. 3 lives each — don't let the timer run out!</div>
+      <div class="actions"><button class="cta" id="start-btn">Start Match</button></div>
+    </div>
+  </div>
+
+  <!-- Game Stage -->
+  <div class="atlas-card" id="game" style="display:none">
+    <div class="hud-stats">
+      <div>P1 Lives: <span id="p1-hearts" class="hearts">❤️❤️❤️</span></div>
+      <div id="status-turn" style="color:var(--ink); font-weight:700;">P1's Turn</div>
+      <div><span id="p2-label">Bot</span>: <span id="p2-hearts" class="hearts">❤️❤️❤️</span></div>
+    </div>
+
+    <div class="timer-bar-wrap">
+      <div id="timer-bar" class="timer-bar"></div>
+    </div>
+
+    <div class="target-letter-box">
+      <small style="text-transform:uppercase; font-size:11px; letter-spacing:1px; color:#666;">Start your place with</small>
+      <span id="target-letter" class="target-letter">A</span>
+    </div>
+
+    <div class="word-input-row">
+      <input type="text" id="word-input" class="word-input" placeholder="e.g. Amsterdam..." autocomplete="off" autocapitalize="words">
+      <button id="btn-submit" class="word-submit">Send</button>
+    </div>
+
+    <div id="feedback-msg" class="feedback-msg" style="color:#ff3b30;"></div>
+
+    <div style="font-size:12px; font-weight:600; margin-bottom:6px; color:#555;">Used Places:</div>
+    <div id="history-box" class="history-box"></div>
+
+    <div style="display:flex; justify-content:center; gap:12px; margin-top:16px;">
+      <button id="btn-reset" style="border-radius:12px !important; padding:10px 22px !important; font-size:14px !important; font-weight:600 !important; background:#1c1c1e !important; color:#ffffff !important; border:none !important; cursor:pointer;">Restart Match</button>
+      <button id="btn-menu" style="border-radius:12px !important; padding:10px 22px !important; font-size:14px !important; font-weight:600 !important; background:rgba(0,0,0,0.08) !important; color:#1c1c1e !important; border:none !important; cursor:pointer;">Back to Menu</button>
+    </div>
+  </div>
+
+  <footer>MADE BY JUSTMISHCHIEF</footer>
+</div>
+<script src="js/atlas.js"></script>
+</body>
+</html>

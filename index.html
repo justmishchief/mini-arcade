@@ -60,7 +60,7 @@
   }
   .rule-modal {
     background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(25px);
+    backdrop-filter: blur(255px);
     border-radius: 24px;
     padding: 24px 22px;
     max-width: 420px;
@@ -173,7 +173,7 @@
 
     <!-- All games grid -->
     <section>
-      <div class="sectionhead"><h2>Top games</h2><span id="count">10 games</span></div>
+      <div class="sectionhead"><h2>Top games</h2><span id="count">12 games</span></div>
       <div class="glist" id="glist">
 
         <a class="gcard glass" href="penfight.html" style="--g1:#007aff;--g2:#5856d6">
@@ -241,6 +241,32 @@
             <small>Pass &amp; match 4 secret slips.</small>
             <span class="playbtn">Play</span>
             <div class="chiprow"><span class="mini">4 players</span><span class="mini">1v3 Bots</span></div>
+          </div>
+        </a>
+
+        <a href="kanche.html" class="glass gcard" style="--g1:#4a3728; --g2:#2b1f17;">
+          <div class="gthumb">⚪</div>
+          <div class="gbody">
+            <h3>Kanche</h3>
+            <small>Knock target marbles out of the ring.</small>
+            <div class="chiprow">
+              <span class="mini">2 players</span>
+              <span class="mini">Online / Bot</span>
+            </div>
+            <span class="playbtn">Play</span>
+          </div>
+        </a>
+
+        <a href="atlas.html" class="glass gcard" style="--g1:#2b5876; --g2:#4e4376;">
+          <div class="gthumb">🌍</div>
+          <div class="gbody">
+            <h3>Atlas</h3>
+            <small>Chain countries & cities before the timer ends.</small>
+            <div class="chiprow">
+              <span class="mini">2 players</span>
+              <span class="mini">Word Battle</span>
+            </div>
+            <span class="playbtn">Play</span>
           </div>
         </a>
 
@@ -328,7 +354,7 @@
   window.addEventListener('popstate', restoreAllGamesView);
 
   // =====================================================================
-  // 2. INJECT AIR HOCKEY & 16 SLIPS RULES POPUP
+  // 2. INJECT AIR HOCKEY, 16 SLIPS, KANCHE & ATLAS RULES POPUP
   // =====================================================================
   document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('rules-container');
@@ -364,6 +390,28 @@
           'Each turn, choose 1 unwanted slip from your hand and pass it clockwise.',
           'Collect 4 identical matching slips before anyone else to win instantly!',
           'Personalize all 4 slip titles from the pre-game match menu.'
+        ]
+      },
+      {
+        icon: '⚪',
+        title: 'Kanche',
+        desc: 'Authentic 2D heavy glass marbles battle on a clay chalk circle.',
+        points: [
+          'Drag back from your golden striker marble to adjust aim and flick force.',
+          'Hit the target marbles resting inside the center ring to push them out.',
+          'Knocking a marble completely beyond the white chalk ring scores +1 point.',
+          'First player to knock out 4 marbles wins the match! Available vs Bot, Pass & Play, and Online Room.'
+        ]
+      },
+      {
+        icon: '🌍',
+        title: 'Atlas',
+        desc: 'Fast-paced country and city word-chain vocabulary race.',
+        points: [
+          'Enter a valid country, capital, or city starting with the prompt letter.',
+          'Next player must chain a location starting with the last letter of the accepted word.',
+          'Already used places cannot be repeated.',
+          'You have a 10s-20s turn timer and 3 lives — running out of time deducts a heart!'
         ]
       }
     ];
